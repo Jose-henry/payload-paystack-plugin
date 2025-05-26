@@ -116,7 +116,3 @@ pnpm build
 # Run tests
 pnpm test
 ```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
