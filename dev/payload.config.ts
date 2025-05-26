@@ -2,7 +2,7 @@ import { mongooseAdapter } from '@payloadcms/db-mongodb'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
 import { buildConfig } from 'payload'
-import { paystackPayloadCms } from 'paystack-payload-cms'
+import { paystackPlugin } from '../src/index.js'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
@@ -26,8 +26,31 @@ export default buildConfig({
   },
   collections: [
     {
-      slug: 'posts',
-      fields: [],
+      slug: 'plan',
+      fields: [
+        {
+          name: 'title',
+          type: 'text',
+        },
+        {
+          name: 'amount',
+          type: 'number',
+        },
+      ],
+    },
+    {
+      slug: 'customer',
+      auth: true,
+      fields: [
+        {
+          name: 'name',
+          type: 'text',
+        },
+        {
+          name: 'email',
+          type: 'email',
+        },
+      ],
     },
     {
       slug: 'media',
@@ -46,10 +69,32 @@ export default buildConfig({
     await seed(payload)
   },
   plugins: [
-    paystackPayloadCms({
-      collections: {
-        posts: true,
-      },
+    paystackPlugin({
+      enabled: true,
+      paystackSecretKey: process.env.PAYSTACK_SECRET_KEY!,
+      webhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET,
+      rest: true,
+      logs: true,
+      sync: [
+        {
+          collection: 'plan',
+          paystackResourceType: 'plans',
+          paystackResourceTypeSingular: 'plan',
+          fields: [
+            { fieldPath: 'title', paystackProperty: 'name' },
+            { fieldPath: 'amount', paystackProperty: 'amount' },
+          ],
+        },
+        {
+          collection: 'customer',
+          paystackResourceType: 'customers',
+          paystackResourceTypeSingular: 'customer',
+          fields: [
+            { fieldPath: 'name', paystackProperty: 'first_name' },
+            { fieldPath: 'email', paystackProperty: 'email' },
+          ],
+        },
+      ],
     }),
   ],
   secret: process.env.PAYLOAD_SECRET || 'test-secret_key',

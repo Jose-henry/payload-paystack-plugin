@@ -1,4 +1,4 @@
-import type { Config, Endpoint } from 'payload'
+/* import type { Config, Endpoint } from 'payload'
 import type { PaystackPluginConfig, SanitizedPaystackPluginConfig } from './types.js'
 
 import { getFields } from './fields/getFields.js'
@@ -63,3 +63,4 @@ export const paystackPlugin =
 
     return config
   }
+ */

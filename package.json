@@ -72,7 +72,6 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "rimraf": "3.0.2",
-    "sharp": "0.32.6",
     "sort-package-json": "^2.10.0",
     "typescript": "5.7.3"
   },
@@ -109,5 +108,11 @@
       "sharp"
     ]
   },
-  "registry": "https://registry.npmjs.org/"
+  "registry": "https://registry.npmjs.org/",
+  "dependencies": {
+    "@paystack/inline-js": "^2.22.4",
+    "@types/dotenv": "^6.1.1",
+    "dotenv": "^16.5.0",
+    "sharp": "^0.32.6"
+  }
 }
