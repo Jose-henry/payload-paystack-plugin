@@ -70,6 +70,11 @@ export interface Config {
     plan: Plan;
     customer: Customer;
     media: Media;
+    product: Product;
+    transaction: Transaction;
+    refund: Refund;
+    order: Order;
+    subscription: Subscription;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
@@ -79,6 +84,11 @@ export interface Config {
     plan: PlanSelect<false> | PlanSelect<true>;
     customer: CustomerSelect<false> | CustomerSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    product: ProductSelect<false> | ProductSelect<true>;
+    transaction: TransactionSelect<false> | TransactionSelect<true>;
+    refund: RefundSelect<false> | RefundSelect<true>;
+    order: OrderSelect<false> | OrderSelect<true>;
+    subscription: SubscriptionSelect<false> | SubscriptionSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
@@ -121,10 +131,10 @@ export interface CustomerAuthOperations {
  */
 export interface Plan {
   id: string;
-  title?: string | null;
-  amount?: number | null;
   paystackID?: string | null;
   skipSync?: boolean | null;
+  title?: string | null;
+  amount?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -134,9 +144,15 @@ export interface Plan {
  */
 export interface Customer {
   id: string;
-  name?: string | null;
   paystackID?: string | null;
   skipSync?: boolean | null;
+  name: string;
+  lastName?: string | null;
+  phone?: string | null;
+  /**
+   * If checked, this customer will be blocked in Paystack (risk_action = deny).
+   */
+  blacklisted?: boolean | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -168,6 +184,74 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "product".
+ */
+export interface Product {
+  id: string;
+  paystackID?: string | null;
+  skipSync?: boolean | null;
+  name: string;
+  description?: string | null;
+  price: number;
+  quantity: number;
+  paystackPlanId?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "transaction".
+ */
+export interface Transaction {
+  id: string;
+  status?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  paid_at?: string | null;
+  customer?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "refund".
+ */
+export interface Refund {
+  id: string;
+  transaction?: string | null;
+  amount?: number | null;
+  status?: string | null;
+  refunded_at?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "order".
+ */
+export interface Order {
+  id: string;
+  amount?: number | null;
+  currency?: string | null;
+  status?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "subscription".
+ */
+export interface Subscription {
+  id: string;
+  status?: string | null;
+  plan?: string | null;
+  customer?: string | null;
+  start?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
@@ -184,6 +268,26 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: string | Media;
+      } | null)
+    | ({
+        relationTo: 'product';
+        value: string | Product;
+      } | null)
+    | ({
+        relationTo: 'transaction';
+        value: string | Transaction;
+      } | null)
+    | ({
+        relationTo: 'refund';
+        value: string | Refund;
+      } | null)
+    | ({
+        relationTo: 'order';
+        value: string | Order;
+      } | null)
+    | ({
+        relationTo: 'subscription';
+        value: string | Subscription;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -232,10 +336,10 @@ export interface PayloadMigration {
  * via the `definition` "plan_select".
  */
 export interface PlanSelect<T extends boolean = true> {
-  title?: T;
-  amount?: T;
   paystackID?: T;
   skipSync?: T;
+  title?: T;
+  amount?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -244,9 +348,12 @@ export interface PlanSelect<T extends boolean = true> {
  * via the `definition` "customer_select".
  */
 export interface CustomerSelect<T extends boolean = true> {
-  name?: T;
   paystackID?: T;
   skipSync?: T;
+  name?: T;
+  lastName?: T;
+  phone?: T;
+  blacklisted?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -273,6 +380,73 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "product_select".
+ */
+export interface ProductSelect<T extends boolean = true> {
+  paystackID?: T;
+  skipSync?: T;
+  name?: T;
+  description?: T;
+  price?: T;
+  quantity?: T;
+  paystackPlanId?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "transaction_select".
+ */
+export interface TransactionSelect<T extends boolean = true> {
+  id?: T;
+  status?: T;
+  amount?: T;
+  currency?: T;
+  paid_at?: T;
+  customer?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "refund_select".
+ */
+export interface RefundSelect<T extends boolean = true> {
+  id?: T;
+  transaction?: T;
+  amount?: T;
+  status?: T;
+  refunded_at?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "order_select".
+ */
+export interface OrderSelect<T extends boolean = true> {
+  id?: T;
+  amount?: T;
+  currency?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "subscription_select".
+ */
+export interface SubscriptionSelect<T extends boolean = true> {
+  id?: T;
+  status?: T;
+  plan?: T;
+  customer?: T;
+  start?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -6,7 +6,7 @@ type HandleCreatedOrUpdated = (
   args: {
     resourceType: string
     syncConfig: SanitizedPaystackPluginConfig['sync'][0]
-  } & Parameters<PaystackWebhookHandler>[0]
+  } & Parameters<PaystackWebhookHandler>[0],
 ) => Promise<void>
 
 export const handleCreatedOrUpdated: HandleCreatedOrUpdated = async (args) => {
@@ -34,12 +34,11 @@ export const handleCreatedOrUpdated: HandleCreatedOrUpdated = async (args) => {
       acc[field.fieldPath] = paystackDoc[field.paystackProperty]
       return acc
     },
-    {} as Record<string, any>
+    {} as Record<string, any>,
   )
 
   syncedData = deepen({
     ...syncedData,
-    skipSync: true,
     paystackID,
   })
 

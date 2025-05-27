@@ -1,0 +1,27 @@
+Paystack Amount Handling:
+- Paystack uses subunits for all currencies (e.g., kobo for NGN, cents for USD)
+- Plugin automatically converts base currency to subunits before sending to Paystack
+- Example with NGN: 100 NGN in Payload → 10000 kobo in Paystack
+- This affects plan amounts, product prices, and other monetary fields
+- No manual conversion needed - plugin handles it automatically
+
+Supported Currencies:
+- NGN (Nigerian Naira) - subunit: Kobo
+- USD (US Dollar) - subunit: Cent
+- GHS (Ghanaian Cedi) - subunit: Pesewa
+- ZAR (South African Rand) - subunit: Cent
+- KES (Kenyan Shilling) - subunit: Cent
+
+Product Currency Requirements:
+- Products must have a currency field in the collection
+- Field must contain one of: NGN, USD, GHS, ZAR, KES
+- Specify the field name in plugin config using productCurrencyField
+- Currency is required for product creation/updates in Paystack
+
+Note: Products require a currency field. Set defaultCurrency in plugin config.
+
+Currency Configuration:
+- Set defaultCurrency in plugin config (defaults to 'NGN')
+- Optionally enable updateExistingProductsOnCurrencyChange
+- When enabled, changing defaultCurrency updates ALL products in Paystack
+- Use with caution as this affects existing orders and transactions 

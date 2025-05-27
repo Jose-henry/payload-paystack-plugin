@@ -1,44 +1,93 @@
-import type { CollectionBeforeChangeHook } from 'payload'
+// src/hooks/syncExistingWithPaystack.ts
+import type { CollectionAfterChangeHook } from 'payload'
 import type { PaystackPluginConfig } from '../types.js'
 import { deepen } from '../utilities/deepen.js'
+import { paystackProxy } from '../utilities/paystackProxy.js'
+import { PaystackPluginLogger } from '../utilities/logger.js'
+import { buildPath } from '../routes/rest.js'
 
 export const syncExistingWithPaystack =
-  (pluginConfig: PaystackPluginConfig): CollectionBeforeChangeHook =>
-  async (args) => {
-    const { data, operation, originalDoc, collection, req } = args
-    const { payload } = req
-    const syncConfig = pluginConfig.sync?.find((conf) => conf.collection === collection.slug)
+  (pluginConfig: PaystackPluginConfig): CollectionAfterChangeHook =>
+  async ({ doc, previousDoc, operation, collection, req }) => {
+    const syncConfig = pluginConfig.sync?.find((c) => c.collection === collection.slug)
+    const logger = new PaystackPluginLogger(req.payload.logger, 'update')
 
-    if (!syncConfig || data.skipSync || process.env.NODE_ENV === 'test') return data
+    // Debug logging
+    logger.info(`[paystack-plugin] [debug] Operation: ${operation}`)
+    logger.info(`[paystack-plugin] [debug] Has sync config: ${!!syncConfig}`)
+    logger.info(`[paystack-plugin] [debug] Skip sync: ${!!doc.skipSync}`)
+    logger.info(`[paystack-plugin] [debug] Test mode: ${!!pluginConfig.testMode}`)
+
+    if (!syncConfig || pluginConfig.testMode || doc.skipSync || operation !== 'update') {
+      logger.info(
+        `[paystack-plugin] [debug] Skipping sync hook due to: ${[
+          !syncConfig && 'no sync config',
+          pluginConfig.testMode && 'test mode',
+          doc.skipSync && 'skipSync flag',
+          operation !== 'update' && 'create operation (use createNewInPaystack hook instead)',
+        ]
+          .filter(Boolean)
+          .join(', ')}`,
+      )
+      return doc
+    }
 
     if (pluginConfig.logs) {
-      payload.logger.info(`[Update] '${collection.slug}' doc updated, syncing to Paystack...`)
+      logger.info(`[paystack-plugin] [sync] Updating '${collection.slug}' ID '${doc.paystackID}'`)
     }
 
-    const body = deepen(syncConfig.fields.reduce((acc, f) => {
-      acc[f.paystackProperty] = data[f.fieldPath]
-      return acc
-    }, {} as Record<string, any>))
+    // Only include fields that actually changed
+    const toUpdate = deepen(
+      syncConfig.fields.reduce(
+        (acc, { fieldPath, paystackProperty }) => {
+          if (doc[fieldPath] !== previousDoc[fieldPath]) {
+            acc[paystackProperty] = doc[fieldPath]
+          }
+          return acc
+        },
+        {} as Record<string, any>,
+      ),
+    )
 
-    try {
-      const res = await fetch(
-        `https://api.paystack.co/${syncConfig.paystackResourceType}/${data.paystackID}`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${pluginConfig.paystackSecretKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
+    // Add currency for products if it's not already included
+    if (
+      syncConfig.paystackResourceType === 'product' &&
+      pluginConfig.defaultCurrency &&
+      !toUpdate.currency
+    ) {
+      toUpdate.currency = pluginConfig.defaultCurrency
+    }
+
+    logger.info(`[paystack-plugin] [debug] Fields to update: ${JSON.stringify(toUpdate)}`)
+
+    if (Object.keys(toUpdate).length) {
+      // For products, extract the numeric ID from the product_code for the API call
+      const resourceId =
+        syncConfig.paystackResourceType === 'product'
+          ? doc.paystackID.split('_')[1] // Extract numeric ID from product_code
+          : doc.paystackID
+
+      const path = buildPath(syncConfig.paystackResourceType as any, resourceId)
+      logger.info(`[paystack-plugin] [debug] Calling Paystack API: ${path}`)
+      const response = await paystackProxy({
+        path,
+        method: 'PUT',
+        body: toUpdate,
+        secretKey: pluginConfig.paystackSecretKey,
+      })
+
+      if (response.status >= 200 && response.status < 300) {
+        if (pluginConfig.logs) {
+          logger.info(`[paystack-plugin] Updated Paystack ID '${doc.paystackID}'`)
         }
-      )
-
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.message || 'Unknown Paystack error')
-    } catch (err) {
-      payload.logger.error(`[Paystack Sync] Error updating ${syncConfig.paystackResourceType}: ${err}`)
+      } else {
+        logger.error(
+          `[paystack-plugin] Error updating Paystack ${syncConfig.paystackResourceType}: ${response.message}`,
+        )
+      }
+    } else if (pluginConfig.logs) {
+      logger.info(`[paystack-plugin] No changes to sync for Paystack ID '${doc.paystackID}'`)
     }
 
-    data.skipSync = false
-    return data
+    return doc
   }

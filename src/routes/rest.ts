@@ -1,37 +1,64 @@
-import { Forbidden, type PayloadRequest } from 'payload'
+import type { PayloadRequest } from 'payload'
+import { addDataAndFileToRequest, Forbidden } from 'payload'
 import type { PaystackPluginConfig } from '../types.js'
-
-
 import { paystackProxy } from '../utilities/paystackProxy.js'
+import { PaystackPluginLogger } from '../utilities/logger.js'
+
+// Centralized Paystack API endpoint definitions
+const PaystackEndpoints: Record<
+  'customer' | 'plan' | 'product' | 'transaction' | 'refund' | 'order' | 'subscription',
+  string
+> = {
+  customer: '/customer',
+  plan: '/plan',
+  product: '/product',
+  transaction: '/transaction',
+  refund: '/refund',
+  order: '/order',
+  subscription: '/subscription',
+}
+
+/**
+ * Build a Paystack API path for a resource, optionally including its code/ID
+ */
+export function buildPath(resource: keyof typeof PaystackEndpoints, code?: string): string {
+  const base = PaystackEndpoints[resource]
+  return code ? `${base}/${code}` : base
+}
 
 export const paystackREST = async (args: {
-  req: PayloadRequest
   pluginConfig: PaystackPluginConfig
-}) => {
-  const { req, pluginConfig } = args
-  const { paystackSecretKey } = pluginConfig
+  req: PayloadRequest
+}): Promise<Response> => {
+  const { pluginConfig, req } = args
+  await addDataAndFileToRequest(req)
+  const logger = new PaystackPluginLogger(req.payload.logger, 'rest')
 
-  let status = 200
-  let responseBody
+  const { data, user } = req
+  if (!user) throw new Forbidden()
 
   try {
-    const { user, data } = req
+    // Data.paystackResource and paystackID should drive the endpoint
+    const resource = data?.paystackResource as keyof typeof PaystackEndpoints
+    const method = ((data?.paystackMethod as string) || 'GET').toUpperCase() as
+      | 'GET'
+      | 'POST'
+      | 'PUT'
+      | 'DELETE'
 
-    if (!user) throw new Forbidden()
+    // Build path using the centralized mapping
+    const path = buildPath(resource, data?.paystackID as string)
 
-    const proxyResponse = await paystackProxy({
-      method: data?.paystackMethod,
-      args: data?.paystackArgs,
-      secretKey: paystackSecretKey,
+    const response = await paystackProxy({
+      path,
+      method,
+      body: data?.paystackArgs?.[0],
+      secretKey: pluginConfig.paystackSecretKey,
     })
-
-    status = proxyResponse.status
-    responseBody = proxyResponse
-  } catch (err) {
-    req.payload.logger.error(`Paystack REST error: ${err}`)
-    status = 500
-    responseBody = { message: String(err) }
+    return Response.json(response, { status: response.status })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    logger.error(`[paystack-plugin] REST proxy error: ${message}`)
+    return Response.json({ status: 500, message }, { status: 500 })
   }
-
-  return Response.json(responseBody, { status })
 }

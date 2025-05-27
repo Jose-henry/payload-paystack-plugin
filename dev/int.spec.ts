@@ -70,20 +70,21 @@ describe('Plugin tests', () => {
   })
 
   it('can create post with a custom text field added by plugin', async () => {
-    const post = await payload.create({
-      collection: 'posts',
+    const plan = await payload.create({
+      collection: 'plan',
       data: {
-        addedByPlugin: 'added by plugin',
+        title: 'Test Plan',
+        amount: 1000,
       },
     })
 
-    expect(post.addedByPlugin).toBe('added by plugin')
+    expect(plan.title).toBe('Test Plan')
   })
 
-  it('plugin creates and seeds plugin-collection', async () => {
-    expect(payload.collections['plugin-collection']).toBeDefined()
+  it('plugin creates and seeds collection', async () => {
+    expect(payload.collections['plan']).toBeDefined()
 
-    const { docs } = await payload.find({ collection: 'plugin-collection' })
+    const { docs } = await payload.find({ collection: 'plan' })
 
     expect(docs).toHaveLength(1)
   })

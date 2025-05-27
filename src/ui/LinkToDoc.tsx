@@ -13,9 +13,11 @@ export const LinkToDoc: UIFieldClientComponent = (props) => {
   const field = useFormFields(([fields]) => fields?.[nameOfIDField] || null)
   const { value: paystackID } = field || {}
 
-  const dashboardURL = `https://dashboard.paystack.com/${paystackResourceType}/${paystackID}`
-
   if (!paystackID) return null
+
+  // Build plural dashboard resource path (e.g. 'customers', 'plans')
+  const resourcePlural = `${paystackResourceType}s`
+  const dashboardURL = `https://dashboard.paystack.com/#/${resourcePlural}/${paystackID}`
 
   return (
     <div>

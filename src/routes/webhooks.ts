@@ -1,7 +1,7 @@
 import type { PayloadRequest, Config as PayloadConfig } from 'payload'
-
+import type { PaystackPluginConfig } from '../types.js'
 import { handleWebhooks } from '../webhooks/index.js'
-import { PaystackPluginConfig } from 'src/types.js'
+import { PaystackPluginLogger } from '../utilities/logger.js'
 
 export const paystackWebhooks = async (args: {
   req: PayloadRequest
@@ -10,6 +10,7 @@ export const paystackWebhooks = async (args: {
 }) => {
   const { req, config, pluginConfig } = args
   const { webhookSecret, webhooks } = pluginConfig
+  const logger = new PaystackPluginLogger(req.payload.logger, 'webhook')
 
   let returnStatus = 200
 
@@ -22,10 +23,7 @@ export const paystackWebhooks = async (args: {
     }
 
     const crypto = await import('crypto')
-    const hash = crypto
-      .createHmac('sha512', webhookSecret)
-      .update(rawBody)
-      .digest('hex')
+    const hash = crypto.createHmac('sha512', webhookSecret).update(rawBody).digest('hex')
 
     if (hash !== signature) {
       throw new Error('Webhook signature mismatch')

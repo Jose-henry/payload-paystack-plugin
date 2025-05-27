@@ -1,48 +1,80 @@
+// src/hooks/createNewInPaystack.ts
 import type { CollectionBeforeValidateHook } from 'payload'
 import type { PaystackPluginConfig } from '../types.js'
 import { deepen } from '../utilities/deepen.js'
+import { paystackProxy } from '../utilities/paystackProxy.js'
+import { PaystackPluginLogger } from '../utilities/logger.js'
+import { buildPath } from '../routes/rest.js'
 
 export const createNewInPaystack =
   (pluginConfig: PaystackPluginConfig): CollectionBeforeValidateHook =>
-  async (args) => {
-    const { data, operation, collection, req } = args
-    const { payload } = req
-    const syncConfig = pluginConfig.sync?.find((conf) => conf.collection === collection.slug)
+  async ({ data, collection, req }) => {
+    const syncConfig = pluginConfig.sync?.find((c) => c.collection === collection.slug)
+    const logger = new PaystackPluginLogger(req.payload.logger, 'create')
 
-    if (!syncConfig || data?.skipSync || process.env.NODE_ENV === 'test') return data
+    // Debug logging
+    logger.info(`[paystack-plugin] [debug] Has sync config: ${!!syncConfig}`)
+    logger.info(`[paystack-plugin] [debug] Skip sync: ${!!data?.skipSync}`)
+    logger.info(`[paystack-plugin] [debug] Test mode: ${!!pluginConfig.testMode}`)
 
-    if (pluginConfig.logs) {
-      payload.logger.info(`[Create] '${collection.slug}' doc created, syncing to Paystack...`)
+    if (!syncConfig || data?.skipSync || pluginConfig.testMode) {
+      logger.info(
+        `[paystack-plugin] [debug] Skipping create hook due to: ${[
+          !syncConfig && 'no sync config',
+          data?.skipSync && 'skipSync flag',
+          pluginConfig.testMode && 'test mode',
+        ]
+          .filter(Boolean)
+          .join(', ')}`,
+      )
+      return data
     }
 
-    const payloadData = data || {}
-    const body = deepen(syncConfig.fields.reduce((acc, f) => {
-      acc[f.paystackProperty] = payloadData[f.fieldPath]
-      return acc
-    }, {} as Record<string, any>))
-
-    try {
-      const res = await fetch(`https://api.paystack.co/${syncConfig.paystackResourceType}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${pluginConfig.paystackSecretKey}`,
-          'Content-Type': 'application/json',
+    // 1) Build request body from your field mappings
+    const body = deepen(
+      syncConfig.fields.reduce(
+        (acc, { fieldPath, paystackProperty }) => {
+          acc[paystackProperty] = (data as any)[fieldPath]
+          return acc
         },
-        body: JSON.stringify(body),
-      })
+        {} as Record<string, any>,
+      ),
+    )
 
-      const json = await res.json()
-
-      if (!res.ok) throw new Error(json.message || 'Unknown Paystack error')
-
-      if (!data) return {}
-      
-      data.paystackID = json.data.id
-      data.skipSync = true
-
-      return data
-    } catch (err) {
-      payload.logger.error(`[Paystack Sync] Error creating ${syncConfig.paystackResourceType}: ${err}`)
-      return data
+    // Add currency for products
+    if (syncConfig.paystackResourceType === 'product' && pluginConfig.defaultCurrency) {
+      body.currency = pluginConfig.defaultCurrency
     }
+
+    logger.info(
+      `[paystack-plugin] [debug] Creating new ${syncConfig.paystackResourceType} in Paystack`,
+    )
+    logger.info(`[paystack-plugin] [debug] Request body: ${JSON.stringify(body, null, 2)}`)
+
+    // 2) Call Paystack
+    const path = buildPath(syncConfig.paystackResourceType as any)
+    logger.info(`[paystack-plugin] [debug] Calling Paystack API: ${path}`)
+    const response = await paystackProxy({
+      path,
+      method: 'POST',
+      body,
+      secretKey: pluginConfig.paystackSecretKey,
+    })
+
+    // 3) Grab the correct *_code field (e.g. customer_code, plan_code, etc.)
+    const codeField = `${syncConfig.paystackResourceTypeSingular}_code`
+    const codeValue = response.data?.[codeField]
+
+    if (response.status >= 200 && response.status < 300 && codeValue) {
+      data!.paystackID = codeValue
+      if (pluginConfig.logs) {
+        logger.info(`[paystack-plugin] Created Paystack ID '${codeValue}'`)
+      }
+    } else {
+      logger.error(
+        `[paystack-plugin] Error creating Paystack ${syncConfig.paystackResourceType}: ${response.message} - Response: ${JSON.stringify(response)}`,
+      )
+    }
+
+    return data
   }
