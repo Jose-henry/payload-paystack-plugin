@@ -15,6 +15,8 @@ Supported Currencies:
 Product Currency Requirements:
 - Products must have a currency field in the collection
 - Field must contain one of: NGN, USD, GHS, ZAR, KES
+- Note: In test mode (sk_test_ keys), only NGN is supported. Other currencies need to be enabled for your integration in live mode. 
+- In live mode NGN is default, to use others, you have to enable it in dashboard
 - Specify the field name in plugin config using productCurrencyField
 - Currency is required for product creation/updates in Paystack
 
@@ -25,3 +27,121 @@ Currency Configuration:
 - Optionally enable updateExistingProductsOnCurrencyChange
 - When enabled, changing defaultCurrency updates ALL products in Paystack
 - Use with caution as this affects existing orders and transactions 
+
+Paystack Integration Notes
+========================
+
+API Endpoints & Methods
+----------------------
+1. Products:
+   - Create: POST /product
+   - Update: PUT /product/:id (numeric ID)
+   - Delete: DELETE /product/:id (numeric ID)
+
+2. Plans:
+   - Create: POST /plan
+   - Update: PUT /plan/:code (plan code)
+   - Delete: DELETE /plan/:code (plan code)
+
+3. Customers:
+   - Create: POST /customer
+   - Update: PUT /customer/:code (customer code)
+   - Delete: DELETE /customer/:code (customer code)
+
+ID Management
+------------
+- Products: Use numeric IDs (e.g., 12345)
+- Plans: Use plan codes (e.g., PLN_abc123)
+- Customers: Use customer codes (e.g., CUS_xyz789)
+
+Currency Handling
+----------------
+1. Test Mode (sk_test_ keys):
+   - Only NGN is supported by default
+   - Other currencies will fail with "Currency not enabled for integration"
+
+2. Live Mode (sk_live_ keys):
+   - NGN is supported by default
+   - Other currencies (USD, GHS, ZAR, KES) need to be enabled in dashboard
+   - Enable currencies in Paystack Dashboard > Settings > API Keys & Webhooks
+
+Amount Conversion
+----------------
+1. Create Operations:
+   - Amounts are converted to kobo (×100)
+   - Example: 1000 NGN → 100000 kobo
+   - Hook: beforeValidate with operation === 'create'
+
+2. Update Operations:
+   - Amounts are sent as-is (no conversion)
+   - Example: 1000 NGN stays as 1000 NGN
+   - This prevents double conversion
+
+Sync Configuration
+-----------------
+1. Field Mapping:
+   - Map Payload fields to Paystack properties
+   - Only mapped fields are synced
+   - Example:
+     {
+       fieldPath: 'name',
+       paystackProperty: 'name'
+     }
+
+2. Update Logic:
+   - Only changed fields are sent to Paystack
+   - Uses PUT method for updates
+   - Maintains existing IDs/codes
+
+3. Delete Logic:
+   - Removes resource from Paystack
+   - Uses DELETE method
+   - Maintains existing IDs/codes
+
+Webhook Handling
+---------------
+1. Endpoint: /paystack/webhook
+2. Events:
+   - charge.success
+   - charge.failed
+   - refund.processed
+   - subscription.created
+   - subscription.disabled
+
+REST API Proxy
+-------------
+1. Endpoint: /paystack/rest
+2. Methods:
+   - GET: Fetch resources
+   - POST: Create resources
+   - PUT: Update resources
+   - DELETE: Remove resources
+
+Error Handling
+-------------
+1. API Errors:
+   - Invalid ID/code format
+   - Currency not enabled
+   - Resource not found
+   - Validation errors
+
+2. Sync Errors:
+   - Failed updates
+   - Failed deletes
+   - Missing required fields
+
+Debug Logging
+------------
+Enable detailed logging with:
+```typescript
+paystackPlugin({
+  logs: true,
+  // ... other config
+})
+```
+
+Logs include:
+- API requests/responses
+- Sync operations
+- Webhook events
+- Error details 

@@ -30,7 +30,11 @@ export default buildConfig({
         {
           name: 'amount',
           type: 'number',
-          hooks: { beforeValidate: [({ value }) => (value ? value * 100 : value)] },
+          hooks: {
+            beforeValidate: [
+              ({ value, operation }) => (operation === 'create' && value ? value * 100 : value),
+            ],
+          },
           admin: {
             description: 'Amount in Naira (will be converted to kobo for Paystack)',
           },
@@ -63,7 +67,11 @@ export default buildConfig({
           type: 'number',
           required: true,
           min: 0,
-          hooks: { beforeValidate: [({ value }) => (value ? value * 100 : value)] },
+          hooks: {
+            beforeValidate: [
+              ({ value, operation }) => (operation === 'create' && value ? value * 100 : value),
+            ],
+          },
           admin: {
             description: 'Amount in Naira (will be converted to kobo for Paystack)',
           },

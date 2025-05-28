@@ -61,13 +61,7 @@ export const syncExistingWithPaystack =
     logger.info(`[paystack-plugin] [debug] Fields to update: ${JSON.stringify(toUpdate)}`)
 
     if (Object.keys(toUpdate).length) {
-      // For products, extract the numeric ID from the product_code for the API call
-      const resourceId =
-        syncConfig.paystackResourceType === 'product'
-          ? doc.paystackID.split('_')[1] // Extract numeric ID from product_code
-          : doc.paystackID
-
-      const path = buildPath(syncConfig.paystackResourceType as any, resourceId)
+      const path = buildPath(syncConfig.paystackResourceType as any, doc.paystackID, 'PUT')
       logger.info(`[paystack-plugin] [debug] Calling Paystack API: ${path}`)
       const response = await paystackProxy({
         path,

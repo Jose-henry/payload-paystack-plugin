@@ -20,10 +20,25 @@ const PaystackEndpoints: Record<
 
 /**
  * Build a Paystack API path for a resource, optionally including its code/ID
+ * For updates:
+ *   - Products: /product/id (numeric ID)
+ *   - Plans: /plan/code (plan code)
+ *   - Customers: /customer/{code} (as is)
+ * For deletes:
+ *   - Products: /product/id (numeric ID)
+ *   - Plans: /plan/code (plan code)
+ *   - Customers: /customer/{code} (as is)
  */
-export function buildPath(resource: keyof typeof PaystackEndpoints, code?: string): string {
+export function buildPath(
+  resource: keyof typeof PaystackEndpoints,
+  code?: string,
+  method?: string,
+): string {
   const base = PaystackEndpoints[resource]
-  return code ? `${base}/${code}` : base
+  if (!code) return base
+
+  // For all resources, just use the code/ID directly without colon
+  return `${base}/${code}`
 }
 
 export const paystackREST = async (args: {
@@ -46,8 +61,8 @@ export const paystackREST = async (args: {
       | 'PUT'
       | 'DELETE'
 
-    // Build path using the centralized mapping
-    const path = buildPath(resource, data?.paystackID as string)
+    // Build path using the centralized mapping, passing the method
+    const path = buildPath(resource, data?.paystackID as string, method)
 
     const response = await paystackProxy({
       path,

@@ -66,9 +66,14 @@ export const createNewInPaystack =
     const codeValue = response.data?.[codeField]
 
     if (response.status >= 200 && response.status < 300 && codeValue) {
-      data!.paystackID = codeValue
+      // For products, store the numeric ID instead of the product_code
+      if (syncConfig.paystackResourceType === 'product' && response.data?.id) {
+        data!.paystackID = response.data.id.toString()
+      } else {
+        data!.paystackID = codeValue
+      }
       if (pluginConfig.logs) {
-        logger.info(`[paystack-plugin] Created Paystack ID '${codeValue}'`)
+        logger.info(`[paystack-plugin] Created Paystack ID '${data!.paystackID}'`)
       }
     } else {
       logger.error(

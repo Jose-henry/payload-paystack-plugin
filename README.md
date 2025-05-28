@@ -1,16 +1,16 @@
 # Paystack Plugin for Payload CMS
 
-A powerful plugin that integrates Paystack payment gateway functionality into your Payload CMS application. This plugin provides seamless payment processing capabilities, webhook handling, and synchronization features.
+A Payload CMS plugin that integrates Paystack payment functionality, providing seamless synchronization between your Payload collections and Paystack resources.
 
 ## Features
 
-- 🔄 Automatic synchronization between Payload collections and Paystack resources
-- 💳 Built-in payment field components
-- 🔔 Webhook handling for payment notifications
-- 🔌 REST API endpoints for Paystack operations
-- 🎨 Customizable UI components
-- 🔒 Secure payment processing
-- 📝 TypeScript support
+- 🔄 Automatic synchronization of Payload collections with Paystack resources
+- 💳 Support for Plans, Products, and Customers
+- 🔒 Secure API key handling
+- 🌐 Webhook support for real-time updates
+- 📊 Read-only collections for Transactions, Refunds, Orders, and Subscriptions
+- 💰 Automatic currency handling and conversion
+- 🛠️ REST API proxy for direct Paystack API access
 
 ## Installation
 
@@ -24,151 +24,177 @@ pnpm add paystack-payload-cms
 
 ## Configuration
 
-### Environment Variables
-
-Add the following environment variables to your `.env` file:
-
-```env
-# Required
-PAYSTACK_SECRET_KEY=your_paystack_secret_key
-
-# Optional
-PAYSTACK_WEBHOOK_SECRET=your_webhook_secret
-PAYSTACK_IS_TEST_KEY=true # Set to true for test mode
-```
-
-### Plugin Setup
-
-In your Payload config file (e.g., `payload.config.ts`):
+Add the plugin to your Payload config:
 
 ```typescript
-import { buildConfig } from 'payload/config';
-import { paystackPlugin } from 'paystack-payload-cms';
+import { buildConfig } from 'payload'
+import { paystackPlugin } from 'paystack-payload-cms'
 
 export default buildConfig({
   // ... other config
   plugins: [
     paystackPlugin({
-      paystackSecretKey: process.env.PAYSTACK_SECRET_KEY,
+      enabled: true,
+      paystackSecretKey: process.env.PAYSTACK_SECRET_KEY!,
       webhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET,
-      isTestKey: process.env.PAYSTACK_IS_TEST_KEY === 'true',
-      rest: true, // Enable REST API endpoints
-      testMode: true, // Enable test mode to prevent real API calls
+      rest: true,
+      logs: true,
+      defaultCurrency: 'NGN',
+      updateExistingProductsOnCurrencyChange: false,
       sync: [
         {
-          collection: 'customers', // Your collection slug
-          paystackResourceType: 'customers',
+          collection: 'product',
+          paystackResourceType: 'product',
+          paystackResourceTypeSingular: 'product',
+          fields: [
+            { fieldPath: 'name', paystackProperty: 'name' },
+            { fieldPath: 'description', paystackProperty: 'description' },
+            { fieldPath: 'price', paystackProperty: 'price' },
+            { fieldPath: 'quantity', paystackProperty: 'quantity' },
+          ],
+        },
+        {
+          collection: 'plan',
+          paystackResourceType: 'plan',
+          paystackResourceTypeSingular: 'plan',
+          fields: [
+            { fieldPath: 'title', paystackProperty: 'name' },
+            { fieldPath: 'amount', paystackProperty: 'amount' },
+          ],
+        },
+        {
+          collection: 'customer',
+          paystackResourceType: 'customer',
           paystackResourceTypeSingular: 'customer',
           fields: [
-            {
-              fieldPath: 'email',
-              paystackProperty: 'email',
-            },
-            // Add more field mappings as needed
+            { fieldPath: 'name', paystackProperty: 'first_name' },
+            { fieldPath: 'email', paystackProperty: 'email' },
+            { fieldPath: 'lastName', paystackProperty: 'last_name' },
+            { fieldPath: 'phone', paystackProperty: 'phone' },
           ],
         },
       ],
     }),
   ],
-});
+})
 ```
 
-## Usage
+## Collection Setup
 
-### Field Types
-
-The plugin provides custom field types for payment integration:
+### Products
 
 ```typescript
 {
-  type: 'paystackPayment',
-  name: 'payment',
-  required: true,
+  slug: 'product',
+  fields: [
+    { name: 'name', type: 'text', required: true },
+    { name: 'description', type: 'textarea' },
+    {
+      name: 'price',
+      type: 'number',
+      required: true,
+      min: 0,
+      hooks: {
+        beforeValidate: [
+          ({ value, operation }) => (operation === 'create' && value ? value * 100 : value),
+        ],
+      },
+      admin: {
+        description: 'Amount in Naira (will be converted to kobo for Paystack)',
+      },
+    },
+    { name: 'quantity', type: 'number', required: true, min: 0, defaultValue: 1 },
+  ],
 }
 ```
 
-### Webhooks
+### Plans
 
-The plugin automatically sets up webhook handling at `/api/paystack/webhook`. Configure your Paystack webhook URL to point to this endpoint.
-
-### REST API
-
-When enabled, the plugin provides REST API endpoints for Paystack operations:
-
-- POST `/api/paystack/rest` - Proxy for Paystack API calls
-
-### Synchronization
-
-The plugin can automatically sync data between your Payload collections and Paystack resources. Configure the sync options in the plugin configuration to specify which fields should be synchronized.
-
-## Amount Handling
-
-Paystack uses subunits (e.g., kobo for NGN, cents for USD) for all monetary values. The plugin automatically handles this conversion:
-
-- When you enter an amount in base currency (e.g., 100 NGN) in Payload
-- The plugin converts it to subunits (100 * 100 = 10000 kobo) before sending to Paystack
-- Paystack displays the amount correctly in base currency in their dashboard
-
-Supported Currencies:
-- NGN (Nigerian Naira) - subunit: Kobo (1 NGN = 100 kobo)
-- USD (US Dollar) - subunit: Cent (1 USD = 100 cents)
-- GHS (Ghanaian Cedi) - subunit: Pesewa (1 GHS = 100 pesewas)
-- ZAR (South African Rand) - subunit: Cent (1 ZAR = 100 cents)
-- KES (Kenyan Shilling) - subunit: Cent (1 KES = 100 cents)
-
-For example with NGN:
-- Enter: 100 NGN in Payload
-- Stored/Sent: 10000 kobo to Paystack
-- Displayed: 100 NGN in Paystack dashboard
-
-This conversion is handled automatically for:
-- Plan amounts
-- Product prices
-- Any other monetary fields synced with Paystack
-
-Note: Products require a currency. You can:
-
-1. Set a default currency in the plugin config:
 ```typescript
-paystackPlugin({
-  // ... other config
-  defaultCurrency: 'NGN', // or 'USD', 'GHS', 'ZAR', 'KES'
-})
+{
+  slug: 'plan',
+  fields: [
+    { name: 'title', type: 'text' },
+    {
+      name: 'amount',
+      type: 'number',
+      hooks: {
+        beforeValidate: [
+          ({ value, operation }) => (operation === 'create' && value ? value * 100 : value),
+        ],
+      },
+      admin: {
+        description: 'Amount in Naira (will be converted to kobo for Paystack)',
+      },
+    },
+  ],
+}
 ```
 
-2. Optionally update all existing products when changing currency:
+### Customers
+
 ```typescript
-paystackPlugin({
-  // ... other config
-  defaultCurrency: 'USD',
-  updateExistingProductsOnCurrencyChange: true, // Updates all products in Paystack
-})
+{
+  slug: 'customer',
+  auth: true,
+  fields: [
+    { name: 'name', type: 'text', required: true },
+    { name: 'lastName', type: 'text' },
+    { name: 'email', type: 'email', required: true },
+    { name: 'phone', type: 'text' },
+  ],
+}
 ```
 
-⚠️ Warning: Enabling `updateExistingProductsOnCurrencyChange` will update ALL products in Paystack with the new currency. Use with caution as this may affect existing orders and transactions.
+## Important Notes
 
-## Development
+1. **Currency Handling**:
+   - Test mode only supports NGN by default
+   - Other currencies (USD, GHS, ZAR, KES) need to be enabled in live mode
+   - Amounts are automatically converted to kobo (×100) during creation only
 
-```bash
-# Install dependencies
-pnpm install
+2. **ID Management**:
+   - Products use numeric IDs
+   - Plans use plan codes (e.g., PLN_xxx)
+   - Customers use customer codes (e.g., CUS_xxx)
 
-# Start development server
-pnpm dev
+3. **Update Operations**:
+   - Updates use PUT method
+   - Only changed fields are sent to Paystack
+   - Amounts are not converted during updates
 
-# Build the plugin
-pnpm build
+4. **Delete Operations**:
+   - Uses DELETE method
+   - Removes the resource from Paystack
 
-# Run tests
-pnpm test
+## Environment Variables
+
+```env
+PAYSTACK_SECRET_KEY=sk_test_xxx
+PAYSTACK_WEBHOOK_SECRET=whsec_xxx
 ```
 
-## Configuration Options
+## API Endpoints
 
-- **paystackSecretKey** (required): your SK  
-- **webhookSecret** (optional): to verify incoming webhooks  
-- **rest**: `true` to enable REST proxy  
-- **logs**: `true` for detailed console logs  
-- **testMode**: `true` to prevent real API calls to Paystack (useful for testing and development)
-- **sync**: array of `{ collection, paystackResourceType, paystackResourceTypeSingular, fields }`  
-- **resourceSlugs** (optional): override default slugs for read-only collections
+The plugin adds the following endpoints:
+
+- `POST /paystack/webhook` - Webhook endpoint for Paystack events
+- `POST /paystack/rest` - REST API proxy for direct Paystack API access
+
+## Read-only Collections
+
+The plugin automatically creates read-only collections for:
+- Transactions
+- Refunds
+- Orders
+- Subscriptions
+
+These collections are synchronized with Paystack data and cannot be modified directly.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+MIT
