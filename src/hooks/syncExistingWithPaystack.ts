@@ -12,23 +12,27 @@ export const syncExistingWithPaystack =
     const syncConfig = pluginConfig.sync?.find((c) => c.collection === collection.slug)
     const logger = new PaystackPluginLogger(req.payload.logger, 'update')
 
-    // Debug logging
-    logger.info(`[paystack-plugin] [debug] Operation: ${operation}`)
-    logger.info(`[paystack-plugin] [debug] Has sync config: ${!!syncConfig}`)
-    logger.info(`[paystack-plugin] [debug] Skip sync: ${!!doc.skipSync}`)
-    logger.info(`[paystack-plugin] [debug] Test mode: ${!!pluginConfig.testMode}`)
+    // Only log if logs are enabled
+    if (pluginConfig.logs) {
+      logger.info(`[paystack-plugin] [debug] Operation: ${operation}`)
+      logger.info(`[paystack-plugin] [debug] Has sync config: ${!!syncConfig}`)
+      logger.info(`[paystack-plugin] [debug] Skip sync: ${!!doc.skipSync}`)
+      logger.info(`[paystack-plugin] [debug] Test mode: ${!!pluginConfig.testMode}`)
+    }
 
     if (!syncConfig || pluginConfig.testMode || doc.skipSync || operation !== 'update') {
-      logger.info(
-        `[paystack-plugin] [debug] Skipping sync hook due to: ${[
-          !syncConfig && 'no sync config',
-          pluginConfig.testMode && 'test mode',
-          doc.skipSync && 'skipSync flag',
-          operation !== 'update' && 'create operation (use createNewInPaystack hook instead)',
-        ]
-          .filter(Boolean)
-          .join(', ')}`,
-      )
+      if (pluginConfig.logs) {
+        logger.info(
+          `[paystack-plugin] [debug] Skipping sync hook due to: ${[
+            !syncConfig && 'no sync config',
+            pluginConfig.testMode && 'test mode',
+            doc.skipSync && 'skipSync flag',
+            operation !== 'update' && 'create operation (use createNewInPaystack hook instead)',
+          ]
+            .filter(Boolean)
+            .join(', ')}`,
+        )
+      }
       return doc
     }
 
@@ -58,16 +62,21 @@ export const syncExistingWithPaystack =
       toUpdate.currency = pluginConfig.defaultCurrency
     }
 
-    logger.info(`[paystack-plugin] [debug] Fields to update: ${JSON.stringify(toUpdate)}`)
+    if (pluginConfig.logs) {
+      logger.info(`[paystack-plugin] [debug] Fields to update: ${JSON.stringify(toUpdate)}`)
+    }
 
     if (Object.keys(toUpdate).length) {
       const path = buildPath(syncConfig.paystackResourceType as any, doc.paystackID, 'PUT')
-      logger.info(`[paystack-plugin] [debug] Calling Paystack API: ${path}`)
+      if (pluginConfig.logs) {
+        logger.info(`[paystack-plugin] [debug] Calling Paystack API: ${path}`)
+      }
       const response = await paystackProxy({
         path,
         method: 'PUT',
         body: toUpdate,
         secretKey: pluginConfig.paystackSecretKey,
+        logs: pluginConfig.logs,
       })
 
       if (response.status >= 200 && response.status < 300) {

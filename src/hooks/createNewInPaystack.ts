@@ -12,21 +12,25 @@ export const createNewInPaystack =
     const syncConfig = pluginConfig.sync?.find((c) => c.collection === collection.slug)
     const logger = new PaystackPluginLogger(req.payload.logger, 'create')
 
-    // Debug logging
-    logger.info(`[paystack-plugin] [debug] Has sync config: ${!!syncConfig}`)
-    logger.info(`[paystack-plugin] [debug] Skip sync: ${!!data?.skipSync}`)
-    logger.info(`[paystack-plugin] [debug] Test mode: ${!!pluginConfig.testMode}`)
+    // Only log if logs are enabled
+    if (pluginConfig.logs) {
+      logger.info(`[paystack-plugin] [debug] Has sync config: ${!!syncConfig}`)
+      logger.info(`[paystack-plugin] [debug] Skip sync: ${!!data?.skipSync}`)
+      logger.info(`[paystack-plugin] [debug] Test mode: ${!!pluginConfig.testMode}`)
+    }
 
     if (!syncConfig || data?.skipSync || pluginConfig.testMode) {
-      logger.info(
-        `[paystack-plugin] [debug] Skipping create hook due to: ${[
-          !syncConfig && 'no sync config',
-          data?.skipSync && 'skipSync flag',
-          pluginConfig.testMode && 'test mode',
-        ]
-          .filter(Boolean)
-          .join(', ')}`,
-      )
+      if (pluginConfig.logs) {
+        logger.info(
+          `[paystack-plugin] [debug] Skipping create hook due to: ${[
+            !syncConfig && 'no sync config',
+            data?.skipSync && 'skipSync flag',
+            pluginConfig.testMode && 'test mode',
+          ]
+            .filter(Boolean)
+            .join(', ')}`,
+        )
+      }
       return data
     }
 
@@ -46,19 +50,24 @@ export const createNewInPaystack =
       body.currency = pluginConfig.defaultCurrency
     }
 
-    logger.info(
-      `[paystack-plugin] [debug] Creating new ${syncConfig.paystackResourceType} in Paystack`,
-    )
-    logger.info(`[paystack-plugin] [debug] Request body: ${JSON.stringify(body, null, 2)}`)
+    if (pluginConfig.logs) {
+      logger.info(
+        `[paystack-plugin] [debug] Creating new ${syncConfig.paystackResourceType} in Paystack`,
+      )
+      logger.info(`[paystack-plugin] [debug] Request body: ${JSON.stringify(body, null, 2)}`)
+    }
 
     // 2) Call Paystack
     const path = buildPath(syncConfig.paystackResourceType as any)
-    logger.info(`[paystack-plugin] [debug] Calling Paystack API: ${path}`)
+    if (pluginConfig.logs) {
+      logger.info(`[paystack-plugin] [debug] Calling Paystack API: ${path}`)
+    }
     const response = await paystackProxy({
       path,
       method: 'POST',
       body,
       secretKey: pluginConfig.paystackSecretKey,
+      logs: pluginConfig.logs,
     })
 
     // 3) Grab the correct *_code field (e.g. customer_code, plan_code, etc.)

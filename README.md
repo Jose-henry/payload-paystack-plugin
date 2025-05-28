@@ -92,7 +92,7 @@ export default buildConfig({
     {
       name: 'price',
       type: 'number',
-      required: true,
+  required: true,
       min: 0,
       hooks: {
         beforeValidate: [

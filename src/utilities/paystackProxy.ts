@@ -15,6 +15,8 @@ interface ProxyOptions {
   timeoutMs?: number
   /** Number of retries on network failure (default: 2) */
   retries?: number
+  /** Whether to enable logging */
+  logs?: boolean
 }
 
 interface ProxyResponse<T = any> {
@@ -27,17 +29,27 @@ interface ProxyResponse<T = any> {
  * Centralized Paystack HTTP client with retries and timeout support.
  */
 export const paystackProxy = async <T = any>(options: ProxyOptions): Promise<ProxyResponse<T>> => {
-  const { path, method = 'GET', body, secretKey, timeoutMs = 10000, retries = 2 } = options
+  const {
+    path,
+    method = 'GET',
+    body,
+    secretKey,
+    timeoutMs = 10000,
+    retries = 2,
+    logs = false,
+  } = options
 
   const url = `https://api.paystack.co${path}`
 
   // Detailed request logging
-  console.log('\n=== Paystack API Request ===')
-  console.log('URL:', url)
-  console.log('Method:', method)
-  console.log('Body:', JSON.stringify(body, null, 2))
-  console.log('API Key:', secretKey ? `Bearer ${secretKey.substring(0, 8)}...` : 'Missing')
-  console.log('===========================\n')
+  if (logs) {
+    console.log('\n=== Paystack API Request ===')
+    console.log('URL:', url)
+    console.log('Method:', method)
+    console.log('Body:', JSON.stringify(body, null, 2))
+    console.log('API Key:', secretKey ? `Bearer ${secretKey.substring(0, 8)}...` : 'Missing')
+    console.log('===========================\n')
+  }
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     const controller = new AbortController()
@@ -58,16 +70,20 @@ export const paystackProxy = async <T = any>(options: ProxyOptions): Promise<Pro
       try {
         json = await res.json()
         // Detailed response logging
-        console.log('\n=== Paystack API Response ===')
-        console.log('Status:', res.status)
-        console.log('Headers:', Object.fromEntries(res.headers.entries()))
-        console.log('Response:', JSON.stringify(json, null, 2))
-        console.log('===========================\n')
+        if (logs) {
+          console.log('\n=== Paystack API Response ===')
+          console.log('Status:', res.status)
+          console.log('Headers:', Object.fromEntries(res.headers.entries()))
+          console.log('Response:', JSON.stringify(json, null, 2))
+          console.log('===========================\n')
+        }
       } catch {
-        console.log('\n=== Paystack API Error ===')
-        console.log('Status:', res.status)
-        console.log('Non-JSON response')
-        console.log('===========================\n')
+        if (logs) {
+          console.log('\n=== Paystack API Error ===')
+          console.log('Status:', res.status)
+          console.log('Non-JSON response')
+          console.log('===========================\n')
+        }
         return { status: res.status, message: `HTTP ${res.status}` }
       }
 
