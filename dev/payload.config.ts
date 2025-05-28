@@ -30,13 +30,9 @@ export default buildConfig({
         {
           name: 'amount',
           type: 'number',
-          hooks: {
-            beforeValidate: [
-              ({ value, operation }) => (operation === 'create' && value ? value * 100 : value),
-            ],
-          },
+          min: 100,
           admin: {
-            description: 'Amount in Naira (will be converted to kobo for Paystack)',
+            description: 'Amount must be equal to or greater than 100 for Paystack',
           },
         },
       ],
@@ -67,17 +63,8 @@ export default buildConfig({
           type: 'number',
           required: true,
           min: 0,
-          hooks: {
-            beforeValidate: [
-              ({ value, operation }) => (operation === 'create' && value ? value * 100 : value),
-            ],
-          },
-          admin: {
-            description: 'Amount in Naira (will be converted to kobo for Paystack)',
-          },
         },
         { name: 'quantity', type: 'number', required: true, min: 0, defaultValue: 1 },
-        { name: 'paystackPlanId', type: 'text', admin: { readOnly: true } },
       ],
     },
     // Read-only: Transactions

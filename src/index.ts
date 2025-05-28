@@ -15,6 +15,34 @@ import { PaystackPluginLogger } from './utilities/logger.js'
 export const paystackPlugin =
   (incomingConfig: PaystackPluginConfig) =>
   (config: Config): Config => {
+    // Validate required configuration
+    if (!incomingConfig.paystackSecretKey) {
+      throw new Error(
+        'Paystack Secret Key is required. Please add PAYSTACK_SECRET_KEY to your environment variables or provide it in the plugin configuration.',
+      )
+    }
+
+    // Check if we're using test or live key
+    const isTestKey = incomingConfig.paystackSecretKey.startsWith('sk_test_')
+    const isLiveKey = incomingConfig.paystackSecretKey.startsWith('sk_live_')
+
+    if (!isTestKey && !isLiveKey) {
+      throw new Error(
+        'Invalid Paystack Secret Key format. Key must start with either "sk_test_" for test mode or "sk_live_" for live mode.',
+      )
+    }
+
+    // Log warning if using live key in non-production environment
+    const isDevelopment = process.env.NODE_ENV !== 'production'
+    if (isLiveKey && isDevelopment) {
+      console.warn(`
+   ⚠️ WARNING: You are using a Paystack LIVE key in a non-production environment.
+   This is not recommended as it will affect real transactions.
+   Current environment: ${process.env.NODE_ENV || 'development (NODE_ENV not set)'}
+   To suppress this warning, set NODE_ENV=production in your environment variables.
+`)
+    }
+
     // 1) default slugs for read-only resources
     const defaultResourceSlugs = {
       transaction: 'transaction',
@@ -33,9 +61,19 @@ export const paystackPlugin =
       rest: incomingConfig.rest ?? false,
       sync: incomingConfig.sync || [],
       testMode: incomingConfig.testMode ?? false,
-      isTestKey: incomingConfig.paystackSecretKey.startsWith('sk_test_'),
+      isTestKey,
       defaultCurrency: incomingConfig.defaultCurrency || 'NGN',
     }
+
+    // Log configuration status
+    console.log(`
+🚀 Paystack Plugin Configuration:
+   • Mode: ${isTestKey ? 'Test' : 'Live'}
+   • REST API: ${pluginConfig.rest ? 'Enabled' : 'Disabled'}
+   • Webhooks: ${pluginConfig.webhookSecret ? 'Configured' : 'Not configured'}
+   • Synced Collections: ${pluginConfig.sync.map((s) => s.collection).join(', ') || 'None'}
+   • Default Currency: ${pluginConfig.defaultCurrency}
+`)
 
     // 3) Update existing products if currency changed and option is enabled
     if (
@@ -107,6 +145,20 @@ export const paystackPlugin =
             admin: {
               position: 'sidebar',
               description: 'If checked this customer will be blocked in Paystack',
+              condition: (data: Record<string, any>) => !data?.skipSync, // Hide when skipSync is checked
+            },
+            hooks: {
+              beforeValidate: [
+                ({ value, data, operation }) => {
+                  // If this is a create operation and skipSync is checked, prevent blacklisting
+                  if (operation === 'create' && data?.skipSync && value) {
+                    throw new Error(
+                      'Cannot blacklist a customer during creation when Skip Sync is checked. Please uncheck Skip Sync first.',
+                    )
+                  }
+                  return value
+                },
+              ],
             },
           })
         }
@@ -115,7 +167,7 @@ export const paystackPlugin =
         const afterCh = (collection.hooks.afterChange ||= [])
         afterCh.push(async ({ doc, previousDoc, operation, req }) => {
           // ◼️ **DO NOT** call on create (only on real updates)
-          if (operation === 'create' || !previousDoc) return
+          if (!previousDoc) return
           // no change, no call
           if (doc.blacklisted === previousDoc.blacklisted) return
 

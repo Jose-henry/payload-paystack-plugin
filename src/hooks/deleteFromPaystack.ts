@@ -37,8 +37,8 @@ export const deleteFromPaystack =
     const id = doc.paystackID as string
 
     if (pluginConfig.logs) {
-      logger.info(`[paystack-plugin] [debug] Paystack ID to delete: ${id}`)
-      logger.info(`[paystack-plugin] [debug] Resource type: ${paystackResourceType}`)
+      logger.info(`[paystack-plugin] [delete-hook] Paystack ID to delete: ${id}`)
+      logger.info(`[paystack-plugin] [delete-hook] Resource type: ${paystackResourceType}`)
       logger.info(`[paystack-plugin] [delete] Removing '${collection.slug}' ID '${id}'`)
     }
 
@@ -46,7 +46,7 @@ export const deleteFromPaystack =
       if (paystackResourceType === 'customer') {
         // Instead of delete, blacklist the customer
         if (pluginConfig.logs) {
-          logger.info(`[paystack-plugin] [debug] Blacklisting customer instead of delete`)
+          logger.info(`[paystack-plugin] [delete-hook] Blacklisting customer instead of delete`)
         }
         const resp = await paystackProxy({
           path: '/customer/set_risk_action',
@@ -66,7 +66,7 @@ export const deleteFromPaystack =
         // For plan/product: attempt real DELETE, but swallow any 4xx/5xx
         const path = buildPath(paystackResourceType as any, id)
         if (pluginConfig.logs) {
-          logger.info(`[paystack-plugin] [debug] Calling Paystack API: ${path}`)
+          logger.info(`[paystack-plugin] [delete-hook] Calling Paystack API: ${path}`)
         }
         const resp = await paystackProxy({
           path,
