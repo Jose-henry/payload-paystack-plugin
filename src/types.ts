@@ -1,4 +1,3 @@
-// ── src/types.ts ──
 import type { CollectionSlug, Payload, Config as PayloadConfig, PayloadRequest } from 'payload'
 
 export type PaystackWebhookHandler<T = any> = (args: {

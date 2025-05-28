@@ -1,4 +1,3 @@
-// src/hooks/syncExistingWithPaystack.ts
 import type { CollectionAfterChangeHook } from 'payload'
 import type { PaystackPluginConfig } from '../types.js'
 import { deepen } from '../utilities/deepen.js'

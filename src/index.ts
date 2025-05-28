@@ -1,4 +1,3 @@
-// ── src/index.ts ──
 import type { Config, Endpoint, CollectionConfig, CollectionAfterChangeHook } from 'payload'
 import type { PaystackPluginConfig, SanitizedPaystackPluginConfig } from './types.js'
 

@@ -1,4 +1,3 @@
-// src/hooks/deleteFromPaystack.ts
 import type { CollectionAfterDeleteHook } from 'payload'
 import type { PaystackPluginConfig } from '../types.js'
 import { paystackProxy } from '../utilities/paystackProxy.js'

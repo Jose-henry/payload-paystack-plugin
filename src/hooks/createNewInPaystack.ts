@@ -1,4 +1,3 @@
-// src/hooks/createNewInPaystack.ts
 import type { CollectionBeforeValidateHook } from 'payload'
 import type { PaystackPluginConfig } from '../types.js'
 import { deepen } from '../utilities/deepen.js'
