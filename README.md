@@ -21,11 +21,14 @@ Supports two-way sync, REST/webhook integration, and advanced customer blacklist
 ## Installation
 
 ```bash
-npm install paystack-payload-cms
+npm install paystack-payload-plugin
+
 # or
-yarn add paystack-payload-cms
+yarn add paystack-payload-plugin
+
 # or
-pnpm add paystack-payload-cms
+pnpm add paystack-payload-plugin
+
 ```
 
 ---
