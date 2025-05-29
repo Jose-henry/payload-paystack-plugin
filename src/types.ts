@@ -27,7 +27,10 @@ export type SyncConfig = {
 }
 
 export type PaystackPluginConfig = {
-  /** Enable the plugin; default true */
+  /**
+   * Enable the plugin; default true
+   * @default true
+   */
   enabled?: boolean
   /** Enable detailed logging of sync events */
   logs?: boolean

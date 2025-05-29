@@ -1,7 +1,7 @@
 {
-  "name": "paystack-payload-cms",
+  "name": "paystack-payload-plugin",
   "version": "1.0.0",
-  "description": "A blank template to get started with Payload 3.0",
+  "description": "A Payload CMS plugin for seamless Paystack integration, featuring two-way sync, webhooks, REST proxy, and customer blacklisting",
   "license": "MIT",
   "type": "module",
   "exports": {

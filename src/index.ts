@@ -17,6 +17,11 @@ declare global {
 export const paystackPlugin =
   (incomingConfig: PaystackPluginConfig) =>
   (config: Config): Config => {
+    // Check if plugin is enabled
+    if (incomingConfig.enabled === false) {
+      return config
+    }
+
     // Validate required configuration
     if (!incomingConfig.paystackSecretKey) {
       throw new Error(
