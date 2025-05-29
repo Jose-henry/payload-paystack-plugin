@@ -5,7 +5,6 @@ import { getFields } from './fields/getFields.js'
 import { createNewInPaystack } from './hooks/createNewInPaystack.js'
 import { deleteFromPaystack } from './hooks/deleteFromPaystack.js'
 import { syncExistingWithPaystack } from './hooks/syncExistingWithPaystack.js'
-
 import { paystackREST } from './routes/rest.js'
 import { paystackWebhooks } from './routes/webhooks.js'
 import { updateProductsCurrency } from './utilities/updateProductsCurrency.js'
@@ -56,6 +55,26 @@ export const paystackPlugin =
       defaultCurrency: incomingConfig.defaultCurrency || 'NGN',
     }
 
+    // Validate polling configuration
+    if (pluginConfig.polling && !pluginConfig.blacklistCustomerOption) {
+      throw new Error('polling requires blacklistCustomerOption to be enabled')
+    }
+
+    if (
+      (pluginConfig.pollingPageSize ||
+        pluginConfig.pollingMaxPages ||
+        pluginConfig.pollingInterval) &&
+      (!pluginConfig.blacklistCustomerOption || !pluginConfig.polling)
+    ) {
+      throw new Error(
+        'All other polling parameters require both blacklistCustomerOption and polling to be enabled',
+      )
+    }
+
+    if (pluginConfig.polling && !pluginConfig.blacklistCustomerOption) {
+      throw new Error('polling requires blacklistCustomerOption to be enabled')
+    }
+
     // ---- Log Paystack Plugin config (ONLY ONCE) ----
     if (!global.__PAYSTACK_CONFIG_LOGGED__) {
       global.__PAYSTACK_CONFIG_LOGGED__ = true
@@ -64,12 +83,13 @@ export const paystackPlugin =
    • Mode: ${isTestKey ? 'Test' : 'Live'}
    • REST API: ${pluginConfig.rest ? 'Enabled' : 'Disabled'}
    • Webhooks: ${pluginConfig.webhookSecret ? 'Configured' : 'Not configured'}
+   • Blacklist Customer Option: ${pluginConfig.blacklistCustomerOption ? (pluginConfig.polling ? 'Enabled with polling' : 'Enabled without polling') : 'Disabled'}
    • Synced Collections: ${pluginConfig.sync.map((s) => s.collection).join(', ') || 'None'}
    • Default Currency: ${pluginConfig.defaultCurrency}
 `)
     }
 
-    // 3) Register webhook & REST endpoints
+    // 2) Register webhook & REST endpoints
     const endpoints: Endpoint[] = [
       ...(config.endpoints || []),
       {
@@ -87,7 +107,7 @@ export const paystackPlugin =
     }
     config.endpoints = endpoints
 
-    // 4) Inject sync hooks & fields into only those user collections listed in sync config
+    // 3) Inject sync hooks & fields into only those user collections listed in sync config
     for (const collection of config.collections || []) {
       const syncCfg = pluginConfig.sync.find((s) => s.collection === collection.slug)
       if (!syncCfg) continue
@@ -166,8 +186,67 @@ export const paystackPlugin =
       }
     }
 
+    // 4) Extend onInit so user custom logic runs, but polling "just works"
+    const userOnInit = config.onInit
+    config.onInit = async (payload) => {
+      // Run user's original onInit (if any)
+      if (typeof userOnInit === 'function') {
+        await userOnInit(payload)
+      }
+      // Run plugin's blacklist polling if enabled
+      if (pluginConfig.blacklistCustomerOption && pluginConfig.polling) {
+        // Run immediately if enabled
+        if (pluginConfig.pollingRunImmediately) {
+          payload.logger.info(
+            '[paystack-plugin] Running (immediately) Paystack blacklist polling...',
+          )
+          await syncBlacklistCustomers({
+            payload,
+            pluginConfig,
+            logger: {
+              info: (msg) => {
+                console.log('[polling info]', msg)
+                payload.logger.info(msg)
+              },
+              error: (msg) => {
+                console.error('[polling error]', msg)
+                payload.logger.error(msg)
+              },
+            },
+            pageSize: pluginConfig.pollingPageSize,
+            maxPages: pluginConfig.pollingMaxPages,
+          })
+        }
+
+        setInterval(
+          () => {
+            payload.logger.info(
+              `[paystack-plugin] Running Paystack blacklist polling on interval ${pluginConfig.pollingInterval}ms...`,
+            )
+            syncBlacklistCustomers({
+              payload,
+              pluginConfig,
+              logger: {
+                info: (msg) => {
+                  console.log('[polling info]', msg)
+                  payload.logger.info(msg)
+                },
+                error: (msg) => {
+                  console.error('[polling error]', msg)
+                  payload.logger.error(msg)
+                },
+              },
+              pageSize: pluginConfig.pollingPageSize,
+              maxPages: pluginConfig.pollingMaxPages,
+            })
+          },
+          pluginConfig.pollingInterval || 10 * 60 * 1000,
+        )
+      }
+    }
+
+    // Export polling function for manual use if needed
     return config
   }
 
-// Export polling function for use in Payload onInit (optional background sync)
 export { syncBlacklistCustomers }

@@ -1,5 +1,12 @@
 # Paystack Plugin for Payload CMS — Implementation Notes
 
+
+**⚠️ NOTE:**
+
+> As of 2025, Paystack webhooks only support a limited number of event types (see below). This means **most collections cannot be synced from Paystack to Payload via webhook.**
+>
+> **For best data integrity, always make changes in Payload (not Paystack),** since webhooks will NOT cover most update scenarios (e.g., customer, plan, or product changes). We recommend treating Payload as your "single source of truth."
+
 ## Currency & Amount Handling
 
 * Supported: NGN (Naira, Kobo), USD (Dollar, Cent), GHS (Cedi, Pesewa), ZAR (Rand, Cent), KES (Shilling, Cent)
@@ -21,7 +28,7 @@
 
 * **Deleting a customer in Payload only blacklists (risk\_action = "deny") in Paystack**—actual customer deletion via API is not supported by Paystack. Your Payload customer is marked as deleted and the equivalent Paystack customer is blacklisted.
 * You can enable a "Blacklisted on Paystack" toggle in your customer collection via `blacklistCustomerOption: true`.
-* Blacklist status is not synced via webhooks (Paystack limitation), but you can enable polling with an `onInit` function (see README for example) to fetch blacklist status from Paystack at regular intervals.
+* Blacklist status is not synced via webhooks (Paystack limitation), but you can enable polling by setting polling parameter in plugin confgi to true, to fetch blacklist status from Paystack at regular intervals.
 
 DELETE BEHAVIOR:
 - Deleting a record in Payload is destructive and will:
@@ -68,6 +75,7 @@ paystackPlugin({
   blacklistCustomerOption: true,
   testMode: false, // If true, requests are simulated only
   defaultCurrency: 'NGN',
+  polling: false
   pollingInterval: 60 * 60 * 1000, // Poll blacklist status every hour
   sync: [ ... ]
 })
@@ -117,6 +125,10 @@ fetch('/paystack/rest', {
 * Rate limits apply for the API; plugin includes retry logic.
 * Data integrity for transaction/refund/order/subscription is best maintained by making those collections read-only in Payload.
 * If you see missing data or unsynced fields, check logs and your field mappings.
+* Changes made in Paystack will NOT sync back to Payload for most collections (except for the supported webhook events above).
+
+* For reliability, always make your changes in Payload, not Paystack.
+
 
 ---
 

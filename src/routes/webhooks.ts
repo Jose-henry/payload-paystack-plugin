@@ -17,11 +17,20 @@ export const paystackWebhooks = async (args: {
   const { webhookSecret, webhooks } = pluginConfig
   const logger = new PaystackPluginLogger(req.payload.logger, 'webhook')
 
+  // Log incoming request details
+  logger.info(
+    `[Paystack Webhook] Received webhook request - Method: ${req.method}, URL: ${req.url}, Headers: ${JSON.stringify(Object.fromEntries(req.headers.entries()))}, Has Body: ${!!req.body}, Has Webhook Secret: ${!!webhookSecret}`,
+  )
+
   let returnStatus = 200
 
   try {
     const rawBody = await req.text?.()
     const signature = req.headers.get('x-paystack-signature')
+
+    logger.info(
+      `[Paystack Webhook] Processing webhook - Has Signature: ${!!signature}, Has Raw Body: ${!!rawBody}, Has Webhook Secret: ${!!webhookSecret}`,
+    )
 
     if (!signature || !rawBody || !webhookSecret) {
       throw new Error('Invalid webhook signature or missing body')
@@ -35,6 +44,7 @@ export const paystackWebhooks = async (args: {
     }
 
     const event = JSON.parse(rawBody)
+    logger.info(`[Paystack Webhook] Event received: ${event.event}`)
 
     // --- (1) Native sync for read-only collections & any configured collection ---
     await handleWebhooks({
@@ -65,7 +75,7 @@ export const paystackWebhooks = async (args: {
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    req.payload.logger.error(`⚠️ Paystack webhook error: ${message}`)
+    logger.error(`⚠️ Paystack webhook error: ${message}`)
     returnStatus = 400
   }
 

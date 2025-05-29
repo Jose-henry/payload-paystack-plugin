@@ -10,6 +10,7 @@ import { devUser } from './helpers/credentials.js'
 import { testEmailAdapter } from './helpers/testEmailAdapter.js'
 import { seed } from './seed.js'
 import type { PaystackPluginConfig } from '../src/types.js'
+import { paymentRequestSuccess } from './webhooks/paymentRequestSuccess.js'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -144,7 +145,14 @@ export default buildConfig({
       rest: true,
       logs: true,
       blacklistCustomerOption: true,
+      polling: true,
+      pollingRunImmediately: false,
+      pollingInterval: 5 * 60 * 1000,
       defaultCurrency: 'NGN',
+      webhooks: {
+        'paymentrequest.success': paymentRequestSuccess,
+        // ...add other event handlers as needed
+      },
       sync: [
         // Example: Product, Plan, Customer as before...
         {
@@ -239,42 +247,4 @@ export default buildConfig({
   secret: process.env.PAYLOAD_SECRET || 'test-secret_key',
   sharp,
   typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },
-
-  // For blacklist customers two way sync fro Paystack to Payload...Runs only if blacklistCustomerOption is true
-  /* onInit: async (payload) => {
-    const pluginConfig = (payload.config.plugins.find((p) => p?.name === 'paystackPlugin') ||
-      {}) as PaystackPluginConfig
-
-    // Dosent require pollingInterval parameter to be set
-    if (pluginConfig.blacklistCustomerOption) {
-      // Run immediately
-      await syncBlacklistCustomers({
-        payload,
-        pluginConfig,
-        logger: {
-          info: (msg) => payload.logger.info(msg),
-          error: (msg) => payload.logger.error(msg),
-        },
-        pageSize: pluginConfig.pollingPageSize,
-        maxPages: pluginConfig.pollingMaxPages,
-      })
-
-      // Set up polling interval (defaults to every hour if not specified) reuires pollingInterval parameter to be set 
-      setInterval(
-        () => {
-          syncBlacklistCustomers({
-            payload,
-            pluginConfig,
-            logger: {
-              info: (msg) => payload.logger.info(msg),
-              error: (msg) => payload.logger.error(msg),
-            },
-            pageSize: pluginConfig.pollingPageSize,
-            maxPages: pluginConfig.pollingMaxPages,
-          })
-        },
-        pluginConfig.pollingInterval || 60 * 60 * 1000,
-      )
-    }
-  }, */
 })

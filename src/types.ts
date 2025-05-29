@@ -53,12 +53,45 @@ export type PaystackPluginConfig = {
    * @default 'NGN'
    */
   defaultCurrency?: 'NGN' | 'USD' | 'GHS' | 'ZAR' | 'KES'
+
+  /**
+   * Enable customer blacklisting functionality.
+   * Required for all polling configurations to take effect.
+   * @default false
+   */
   blacklistCustomerOption?: boolean
 
+  /**
+   * Enable polling functionality.
+   * Required for all polling parameters (except pollingRunImmediately) to take effect.
+   * @default false
+   */
+  polling?: boolean
+
+  /**
+   * Number of records to fetch per polling request.
+   * Only takes effect if both blacklistCustomerOption and polling are true.
+   * @default 100
+   */
   pollingPageSize?: number
+
+  /**
+   * Maximum number of pages to fetch during polling.
+   * Only takes effect if both blacklistCustomerOption and polling are true.
+   * @default 10
+   */
   pollingMaxPages?: number
+
+  /**
+   * Run initial sync of blacklisted customers on plugin init.
+   * Only takes effect if blacklistCustomerOption is true.
+   * @default false
+   */
+  pollingRunImmediately?: boolean
+
   /**
    * Interval in milliseconds for polling Paystack to sync blacklisted customers.
+   * Only takes effect if both blacklistCustomerOption and polling are true.
    * Examples:
    * - 60 * 60 * 1000 = 3,600,000ms (1 hour)
    * - 5 * 60 * 1000 = 300,000ms (5 minutes)

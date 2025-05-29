@@ -15,6 +15,8 @@ type SyncBlacklistArgs = {
  */
 export async function syncBlacklistCustomers({ payload, pluginConfig, logger }: SyncBlacklistArgs) {
   // Defensive: skip polling if not enabled in config
+  logger.info('[polling] Polling function started.')
+
   if (!pluginConfig.blacklistCustomerOption) {
     logger.info('[polling] Skipped blacklist sync: blacklistCustomerOption is not enabled.')
     return

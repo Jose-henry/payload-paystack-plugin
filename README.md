@@ -84,39 +84,6 @@ export default buildConfig({
       ],
     }),
   ],
-
-  onInit: async (payload) => {
-    const { PaystackPluginConfig } = await import('paystack-payload-cms/types')
-    const pluginConfig = (payload.config.plugins.find((p) => p?.name === 'paystackPlugin') || {}) as typeof PaystackPluginConfig
-
-    if (pluginConfig.blacklistCustomerOption) {
-      await syncBlacklistCustomers({
-        payload,
-        pluginConfig,
-        logger: {
-          info: (msg) => payload.logger.info(msg),
-          error: (msg) => payload.logger.error(msg),
-        },
-        pageSize: pluginConfig.pollingPageSize,
-        maxPages: pluginConfig.pollingMaxPages,
-      })
-
-      setInterval(
-        () =>
-          syncBlacklistCustomers({
-            payload,
-            pluginConfig,
-            logger: {
-              info: (msg) => payload.logger.info(msg),
-              error: (msg) => payload.logger.error(msg),
-            },
-            pageSize: pluginConfig.pollingPageSize,
-            maxPages: pluginConfig.pollingMaxPages,
-          }),
-        pluginConfig.pollingInterval || 60 * 60 * 1000
-      )
-    }
-  },
 })
 ```
 
@@ -164,9 +131,7 @@ Use the same value for `paystackSecretKey` and `webhookSecret` (usually your Pay
 
 On localhost, run:
 
-```bash
-ngrok http 3000
-```
+Follow and Read [ngrok docs](https://dashboard.ngrok.com/get-started), to create a local domain
 
 and use the public URL in your Paystack dashboard.
 
@@ -196,11 +161,22 @@ The request will be proxied using your secret key.
 
 When `blacklistCustomerOption: true`, a "Blacklisted on Paystack" checkbox appears in the Payload admin sidebar for the customer collection.
 
+**About Polling**
+
+Because Paystack does not send webhooks for customer blacklist/risk status changes, this plugin includes a built-in background polling mechanism (runs on server start and at your chosen interval if enabled). Polling ensures that customer blacklist status in Payload stays in sync with Paystack. Polling only happens if youve set its parameter in plugin config to true
+
+pollingInterval controls how often the sync runs (in milliseconds).
+
+pollingRunImmediately (default: false) controls whether the polling runs once as soon as Payload starts.
+
+You do NOT need to manually call any polling function in your Payload config. The plugin does this automatically.
+
 Deleting a customer in Payload sets `risk_action: "deny"` in Paystack.
 
 ### Important Note About Deletion
 
 Deleting a record in Payload is a destructive process that will:
+
 1. Delete the record from Payload
 2. If the record has a `paystackID`, attempt to delete/blacklist it in Paystack
 3. This happens regardless of whether `skipSync` was checked during creation
@@ -211,6 +187,74 @@ The `skipSync` flag only prevents creation/updates in Paystack, but deletion wil
 
 * Paystack does **not** support actual customer deletion via API.
 * No webhook is emitted for risk\_action changes; polling is the only method to sync blacklist status.
+
+---
+
+## Webhook Support: Limitations and Usage
+
+**⚠️ NOTE:**
+
+> As of 2024, Paystack webhooks only support a limited number of event types (see below). This means **most collections cannot be synced from Paystack to Payload via webhook.**
+>
+> **For best data integrity, always make changes in Payload (not Paystack),** since webhooks will NOT cover most update scenarios (e.g., customer, plan, or product changes). We recommend treating Payload as your "single source of truth."
+
+### Supported Paystack Events (as of May 2024)
+
+| Event Name                      | Example Usage                      |
+| ------------------------------- | ---------------------------------- |
+| charge.dispute.create           | Disputes                           |
+| charge.dispute.remind           | Disputes                           |
+| charge.dispute.resolve          | Disputes                           |
+| charge.success                  | Transaction success (e.g., orders) |
+| customeridentification.failed   | KYC/ID validation failed           |
+| customeridentification.success  | KYC/ID validation passed           |
+| dedicatedaccount.assign.failed  | DVA (dedicated virtual account)    |
+| dedicatedaccount.assign.success | DVA assigned                       |
+| invoice.create                  | Invoice for a subscription         |
+| invoice.payment\_failed         | Invoice payment failed             |
+| invoice.update                  | Invoice updated/charged            |
+| paymentrequest.pending          | Payment request sent               |
+| paymentrequest.success          | Payment request paid               |
+| refund.failed                   | Refund failed                      |
+| refund.pending                  | Refund pending                     |
+| refund.processed                | Refund processed                   |
+| refund.processing               | Refund processing                  |
+| subscription.create             | Subscription created               |
+| subscription.disable            | Subscription disabled              |
+| subscription.expiring\_cards    | Card for sub expiring              |
+| subscription.not\_renew         | Sub won't auto-renew               |
+| transfer.failed                 | Transfer failed                    |
+| transfer.success                | Transfer success                   |
+| transfer.reversed               | Transfer reversed                  |
+
+**See:** [Paystack Webhook Docs](https://paystack.com/docs/payments/webhooks/#events)
+
+### Example: Writing a Webhook Handler
+
+To handle a supported webhook event, pass a handler to the plugin config. Here's an example that logs refunds processed:
+
+```ts
+import type { PaystackWebhookHandler } from '{path}/types'
+
+export const refundProcessed: PaystackWebhookHandler = async ({ event, payload }) => {
+  if (event.event === 'refund.processed') {
+    const refundData = event.data
+    payload.logger.info(`Refund processed: ${JSON.stringify(refundData)}`)
+    // You may update your 'refund' collection here if you wish
+  }
+}
+
+// Register in your plugin config:
+paystackPlugin({
+  // ...other config,
+  webhooks: {
+    'refund.processed': refundProcessed,
+    // ...
+  },
+})
+```
+
+> **Tip:** Most other resource types (product, plan, customer, etc) do NOT have webhook event support.
 
 ---
 
@@ -269,3 +313,15 @@ A: Use the `fields` mapping in your sync config.
 
 **Q: I get webhook signature errors!**
 A: Use the same key for `paystackSecretKey` and `webhookSecret`.
+
+---
+
+## Final Notes
+
+* **Changes made in Paystack will NOT sync back to Payload for most collections** (except for the supported webhook events above).
+* For reliability, always make your changes in Payload, not Paystack.
+* Read the [Paystack API Docs](https://paystack.com/docs/api) and [Webhook Docs](https://paystack.com/docs/payments/webhooks/#events) for more info and updates.
+
+---
+
+Happy coding! 🚀
