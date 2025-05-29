@@ -60,7 +60,7 @@ describe('Plugin tests', () => {
   })
 
   it('should query added by plugin custom endpoint', async () => {
-    const response = await restClient.GET('/my-plugin-endpoint')
+    const response = await restClient.GET('/paystack/rest')
     expect(response.status).toBe(200)
 
     const data = await response.json()
