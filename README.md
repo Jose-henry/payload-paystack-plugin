@@ -14,7 +14,7 @@ Supports two-way sync, REST/webhook integration, and advanced customer blacklist
 * 🛠️ Expose a `/paystack/rest` endpoint for any Paystack API call, directly from your authenticated frontend or backend.
 * 🔐 Secure webhook signature verification; logs and error handling.
 * 🧪 **Test Mode**: simulate requests without sending to Paystack, for safe development and QA.
-* 💡 **No code license**—use as you like!
+
 
 ---
 
@@ -328,3 +328,10 @@ A: Use the same key for `paystackSecretKey` and `webhookSecret`.
 ---
 
 Happy coding! 🚀
+
+---
+
+## License
+
+MIT License
+
