@@ -1,4 +1,4 @@
-import type { Config, Endpoint, CollectionConfig, CollectionAfterChangeHook } from 'payload'
+import type { Config, Endpoint } from 'payload'
 import type { PaystackPluginConfig, SanitizedPaystackPluginConfig } from './types.js'
 
 import { getFields } from './fields/getFields.js'
@@ -9,7 +9,11 @@ import { syncExistingWithPaystack } from './hooks/syncExistingWithPaystack.js'
 import { paystackREST } from './routes/rest.js'
 import { paystackWebhooks } from './routes/webhooks.js'
 import { updateProductsCurrency } from './utilities/updateProductsCurrency.js'
-import { PaystackPluginLogger } from './utilities/logger.js'
+import { syncBlacklistCustomers } from './polling/syncBlacklistCustomers.js'
+
+declare global {
+  var __PAYSTACK_CONFIG_LOGGED__: boolean | undefined
+}
 
 export const paystackPlugin =
   (incomingConfig: PaystackPluginConfig) =>
@@ -42,19 +46,7 @@ export const paystackPlugin =
 `)
     }
 
-    // 1) default slugs for read-only resources
-    const defaultResourceSlugs = {
-      transaction: 'transaction',
-      refund: 'refund',
-      order: 'order',
-      subscription: 'subscription',
-    }
-    const resourceSlugs = {
-      ...defaultResourceSlugs,
-      ...(incomingConfig.resourceSlugs || {}),
-    }
-
-    // 2) sanitize incoming config
+    // 1) Sanitize incoming config
     const pluginConfig: SanitizedPaystackPluginConfig = {
       ...incomingConfig,
       rest: incomingConfig.rest ?? false,
@@ -64,8 +56,10 @@ export const paystackPlugin =
       defaultCurrency: incomingConfig.defaultCurrency || 'NGN',
     }
 
-    // Log configuration status
-    console.log(`
+    // ---- Log Paystack Plugin config (ONLY ONCE) ----
+    if (!global.__PAYSTACK_CONFIG_LOGGED__) {
+      global.__PAYSTACK_CONFIG_LOGGED__ = true
+      console.log(`
 🚀 Paystack Plugin Configuration:
    • Mode: ${isTestKey ? 'Test' : 'Live'}
    • REST API: ${pluginConfig.rest ? 'Enabled' : 'Disabled'}
@@ -73,25 +67,9 @@ export const paystackPlugin =
    • Synced Collections: ${pluginConfig.sync.map((s) => s.collection).join(', ') || 'None'}
    • Default Currency: ${pluginConfig.defaultCurrency}
 `)
-
-    // 3) Update existing products if currency changed and option is enabled
-    if (
-      !pluginConfig.testMode &&
-      pluginConfig.updateExistingProductsOnCurrencyChange &&
-      pluginConfig.defaultCurrency
-    ) {
-      const logger = {
-        info: (msg: string) => console.log(msg),
-        error: (msg: string) => console.error(msg),
-      }
-      updateProductsCurrency(pluginConfig, logger).catch((error) => {
-        logger.error(`[paystack-plugin] Failed to update product currencies: ${error}`)
-      })
     }
 
-    //
-    // 4) register webhook & REST endpoints
-    //
+    // 3) Register webhook & REST endpoints
     const endpoints: Endpoint[] = [
       ...(config.endpoints || []),
       {
@@ -109,17 +87,15 @@ export const paystackPlugin =
     }
     config.endpoints = endpoints
 
-    //
-    // 5) inject sync-hooks & blacklist toggle into user's Collections
-    //
+    // 4) Inject sync hooks & fields into only those user collections listed in sync config
     for (const collection of config.collections || []) {
       const syncCfg = pluginConfig.sync.find((s) => s.collection === collection.slug)
       if (!syncCfg) continue
 
-      // a) inject paystackID / skipSync / dashboard link
+      // a) Inject paystackID, skipSync, and other dashboard fields
       collection.fields = getFields({ collection, pluginConfig, syncConfig: syncCfg })
 
-      // b) inject create/update/delete hooks
+      // b) Inject create/update/delete hooks
       collection.hooks = {
         ...(collection.hooks || {}),
         beforeValidate: [
@@ -133,9 +109,9 @@ export const paystackPlugin =
         afterDelete: [...(collection.hooks?.afterDelete || []), deleteFromPaystack(pluginConfig)],
       }
 
-      // c) if this is your "customer" resource, add the blacklisting toggle + hook
-      if (syncCfg.paystackResourceType === 'customer') {
-        // only add the field if it doesn't already exist
+      // c) Customer blacklisting toggle (if applicable)
+      if (syncCfg.paystackResourceType === 'customer' && pluginConfig.blacklistCustomerOption) {
+        // Only add the field if it doesn't already exist
         if (!collection.fields.some((f) => 'name' in f && f.name === 'blacklisted')) {
           collection.fields.push({
             name: 'blacklisted',
@@ -144,12 +120,11 @@ export const paystackPlugin =
             admin: {
               position: 'sidebar',
               description: 'If checked this customer will be blocked in Paystack',
-              condition: (data: Record<string, any>) => !data?.skipSync, // Hide when skipSync is checked
+              condition: (data: Record<string, any>) => !data?.skipSync,
             },
             hooks: {
               beforeValidate: [
                 ({ value, data, operation }) => {
-                  // If this is a create operation and skipSync is checked, prevent blacklisting
                   if (operation === 'create' && data?.skipSync && value) {
                     throw new Error(
                       'Cannot blacklist a customer during creation when Skip Sync is checked. Please uncheck Skip Sync first.',
@@ -162,12 +137,11 @@ export const paystackPlugin =
           })
         }
 
-        // append to afterChange
+        // Append to afterChange
         const afterCh = (collection.hooks.afterChange ||= [])
         afterCh.push(async ({ doc, previousDoc, operation, req }) => {
-          // ◼️ **DO NOT** call on create (only on real updates)
+          // Only on real updates
           if (!previousDoc) return
-          // no change, no call
           if (doc.blacklisted === previousDoc.blacklisted) return
 
           const { paystackProxy } = await import('./utilities/paystackProxy.js')
@@ -192,63 +166,8 @@ export const paystackPlugin =
       }
     }
 
-    //
-    // 6) auto-scaffold missing read-only collections (transactions, refunds, etc.)
-    //
-    config.collections = config.collections || []
-    for (const [resource, slug] of Object.entries(resourceSlugs) as Array<
-      [keyof typeof defaultResourceSlugs, string]
-    >) {
-      if (config.collections.some((c) => c.slug === slug)) continue
-
-      const labels = {
-        transaction: { singular: 'Transaction', plural: 'Transactions' },
-        refund: { singular: 'Refund', plural: 'Refunds' },
-        order: { singular: 'Order', plural: 'Orders' },
-        subscription: { singular: 'Subscription', plural: 'Subscriptions' },
-      }[resource]
-
-      config.collections.push({
-        slug,
-        labels,
-        access: { create: () => false, read: () => true, update: () => false, delete: () => false },
-        fields: [
-          { name: 'id', type: 'text', label: `${labels.singular} ID` },
-          { name: 'status', type: 'text', label: 'Status' },
-          // … expand per-resource as desired …
-        ],
-        hooks: {
-          afterOperation: [
-            async ({ operation, result, req }) => {
-              const { paystackProxy } = await import('./utilities/paystackProxy.js')
-              if (!result) return
-              const isList = operation === 'find'
-              const path = isList ? `/${resource}` : `/${resource}/${(result as any).doc?.id}`
-
-              const resp = await paystackProxy({
-                path,
-                secretKey: pluginConfig.paystackSecretKey,
-              })
-
-              if (isList && resp.status === 200 && Array.isArray(resp.data)) {
-                return {
-                  docs: resp.data.map((item: any) => ({
-                    id: item.id.toString(),
-                    status: item.status,
-                  })),
-                  totalDocs: resp.data.length,
-                }
-              }
-
-              if (!isList && resp.status === 200) {
-                const item = resp.data
-                return { doc: { id: item.id.toString(), status: item.status } }
-              }
-            },
-          ],
-        },
-      } as CollectionConfig)
-    }
-
     return config
   }
+
+// Export polling function for use in Payload onInit (optional background sync)
+export { syncBlacklistCustomers }

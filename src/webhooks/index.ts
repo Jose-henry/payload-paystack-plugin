@@ -2,6 +2,13 @@ import type { PaystackWebhookHandler } from '../types.js'
 import { handleCreatedOrUpdated } from './handleCreatedOrUpdated.js'
 import { handleDeleted } from './handleDeleted.js'
 
+/**
+ * Orchestrates native sync for Paystack webhook events.
+ * Handles all collections registered in pluginConfig.sync (including read-only).
+ * - "created"/"updated"/"success"/"processed" => upsert in Payload
+ * - "deleted" => remove from Payload
+ * Logs if method/action is not handled natively.
+ */
 export const handleWebhooks: PaystackWebhookHandler = async (args) => {
   const { event, payload, pluginConfig } = args
 
@@ -9,18 +16,24 @@ export const handleWebhooks: PaystackWebhookHandler = async (args) => {
     payload.logger.info(`🪝 Received Paystack event: '${event.event}'`)
   }
 
-  const eventType = event.event // e.g. "customer.created"
-  const [resourceTypeRaw, method] = eventType.split('.') // "customer", "created"
+  // Get resource and action from the event name (e.g. "transaction.success")
+  const [resourceTypeRaw, method] = event.event.split('.') // e.g., "transaction", "success"
 
+  // Find sync config for this resource type (e.g., transaction, refund, etc.)
   const syncConfig = pluginConfig?.sync?.find(
     (sync) => sync.paystackResourceTypeSingular === resourceTypeRaw,
   )
 
+  // If this event isn't mapped to a sync config, do nothing (user custom handler will still run in route)
   if (!syncConfig) return
 
+  // Native sync logic for upsert/delete
   switch (method) {
+    // Upsert on any create/update/success/processed event
     case 'created':
     case 'updated':
+    case 'success':
+    case 'processed':
       await handleCreatedOrUpdated({
         ...args,
         pluginConfig,
@@ -28,6 +41,7 @@ export const handleWebhooks: PaystackWebhookHandler = async (args) => {
         syncConfig,
       })
       break
+    // Remove on "deleted"
     case 'deleted':
       await handleDeleted({
         ...args,
@@ -37,6 +51,12 @@ export const handleWebhooks: PaystackWebhookHandler = async (args) => {
       })
       break
     default:
+      // Log for unsupported native sync events (but user's handler may still run)
+      if (pluginConfig?.logs) {
+        payload.logger.info(
+          `ℹ️ Paystack event '${event.event}' received, but not natively handled by plugin. Only user-defined handlers (if any) will run.`,
+        )
+      }
       break
   }
 }

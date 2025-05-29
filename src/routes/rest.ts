@@ -4,43 +4,6 @@ import type { PaystackPluginConfig } from '../types.js'
 import { paystackProxy } from '../utilities/paystackProxy.js'
 import { PaystackPluginLogger } from '../utilities/logger.js'
 
-// Centralized Paystack API endpoint definitions
-const PaystackEndpoints: Record<
-  'customer' | 'plan' | 'product' | 'transaction' | 'refund' | 'order' | 'subscription',
-  string
-> = {
-  customer: '/customer',
-  plan: '/plan',
-  product: '/product',
-  transaction: '/transaction',
-  refund: '/refund',
-  order: '/order',
-  subscription: '/subscription',
-}
-
-/**
- * Build a Paystack API path for a resource, optionally including its code/ID
- * For updates:
- *   - Products: /product/id (numeric ID)
- *   - Plans: /plan/code (plan code)
- *   - Customers: /customer/{code} (as is)
- * For deletes:
- *   - Products: /product/id (numeric ID)
- *   - Plans: /plan/code (plan code)
- *   - Customers: /customer/{code} (as is)
- */
-export function buildPath(
-  resource: keyof typeof PaystackEndpoints,
-  code?: string,
-  method?: string,
-): string {
-  const base = PaystackEndpoints[resource]
-  if (!code) return base
-
-  // For all resources, just use the code/ID directly without colon
-  return `${base}/${code}`
-}
-
 export const paystackREST = async (args: {
   pluginConfig: PaystackPluginConfig
   req: PayloadRequest
@@ -53,17 +16,19 @@ export const paystackREST = async (args: {
   if (!user) throw new Forbidden()
 
   try {
-    // Data.paystackResource and paystackID should drive the endpoint
-    const resource = data?.paystackResource as keyof typeof PaystackEndpoints
+    // Get the raw path and method from the body
+    const path = data?.paystackPath as string // e.g., "/transaction/initialize"
     const method = ((data?.paystackMethod as string) || 'GET').toUpperCase() as
       | 'GET'
       | 'POST'
       | 'PUT'
       | 'DELETE'
 
-    // Build path using the centralized mapping, passing the method
-    const path = buildPath(resource, data?.paystackID as string, method)
+    if (!path || typeof path !== 'string') {
+      throw new Error('Missing or invalid paystackPath')
+    }
 
+    // Forward the request to Paystack
     const response = await paystackProxy({
       path,
       method,
@@ -77,3 +42,19 @@ export const paystackREST = async (args: {
     return Response.json({ status: 500, message }, { status: 500 })
   }
 }
+
+//example usage
+/* await fetch('/paystack/rest', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  credentials: 'include',
+  body: JSON.stringify({
+    paystackPath: '/transaction/initialize',
+    paystackMethod: 'POST',
+    paystackArgs: [{
+      email: "demo@test.com",
+      amount: 20000
+    }]
+  })
+});
+ */

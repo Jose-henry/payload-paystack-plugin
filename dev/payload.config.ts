@@ -2,13 +2,14 @@ import { mongooseAdapter } from '@payloadcms/db-mongodb'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
 import { buildConfig } from 'payload'
-import { paystackPlugin } from '../src/index.js'
+import { paystackPlugin, syncBlacklistCustomers } from '../src/index.js'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
 import { devUser } from './helpers/credentials.js'
 import { testEmailAdapter } from './helpers/testEmailAdapter.js'
 import { seed } from './seed.js'
+import type { PaystackPluginConfig } from '../src/types.js'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -45,7 +46,6 @@ export default buildConfig({
         { name: 'lastName', type: 'text' },
         { name: 'email', type: 'email', required: true },
         { name: 'phone', type: 'text' },
-        // ←you can add a new blacklisted toggle
       ],
     },
     {
@@ -67,114 +67,40 @@ export default buildConfig({
         { name: 'quantity', type: 'number', required: true, min: 0, defaultValue: 1 },
       ],
     },
-    // Read-only: Transactions
+
+    // ---- Read-Only: Transaction ----
     {
       slug: 'transaction',
       labels: { singular: 'Transaction', plural: 'Transactions' },
       access: { create: () => false, update: () => false, delete: () => false, read: () => true },
       fields: [
-        { name: 'id', type: 'text', label: 'ID' },
         { name: 'status', type: 'text', label: 'Status' },
+        { name: 'reference', type: 'text', label: 'Reference' },
         { name: 'amount', type: 'number', label: 'Amount' },
         { name: 'currency', type: 'text', label: 'Currency' },
         { name: 'paid_at', type: 'text', label: 'Paid At' },
-        { name: 'customer', type: 'text', label: 'Customer Code' },
+        { name: 'customer_code', type: 'text', label: 'Customer Code' },
+        { name: 'channel', type: 'text', label: 'Channel' },
       ],
-      hooks: {
-        afterOperation: [
-          async ({ operation, result, req }) => {
-            const { paystackProxy } = await import('../src/utilities/paystackProxy.js')
-            const secret = process.env.PAYSTACK_SECRET_KEY!
-            if (operation === 'find') {
-              const resp = await paystackProxy({ path: '/transaction', secretKey: secret })
-              if (resp.status === 200 && Array.isArray(resp.data)) {
-                return {
-                  docs: resp.data.map((t) => ({
-                    id: t.id.toString(),
-                    status: t.status,
-                    amount: t.amount,
-                    currency: t.currency,
-                    paid_at: t.paid_at,
-                    customer: t.customer?.customer_code || '',
-                  })),
-                  totalDocs: resp.data.length,
-                }
-              }
-            }
-            if (operation === 'findByID') {
-              const id = result?.doc?.id
-              const resp = await paystackProxy({ path: `/transaction/${id}`, secretKey: secret })
-              if (resp.status === 200 && resp.data) {
-                const t = resp.data
-                return {
-                  doc: {
-                    id: t.id.toString(),
-                    status: t.status,
-                    amount: t.amount,
-                    currency: t.currency,
-                    paid_at: t.paid_at,
-                    customer: t.customer?.customer_code || '',
-                  },
-                }
-              }
-            }
-          },
-        ],
-      },
     },
-    // Read-only: Refunds
+
+    // ---- Read-Only: Refund ----
     {
       slug: 'refund',
       labels: { singular: 'Refund', plural: 'Refunds' },
       access: { create: () => false, update: () => false, delete: () => false, read: () => true },
       fields: [
-        { name: 'id', type: 'text', label: 'Refund ID' },
         { name: 'transaction', type: 'text', label: 'Transaction ID' },
         { name: 'amount', type: 'number', label: 'Amount' },
         { name: 'status', type: 'text', label: 'Status' },
+        { name: 'currency', type: 'text', label: 'Currency' },
         { name: 'refunded_at', type: 'text', label: 'Refunded At' },
+        { name: 'customer_note', type: 'text', label: 'Customer Note' },
+        { name: 'merchant_note', type: 'text', label: 'Merchant Note' },
       ],
-      hooks: {
-        afterOperation: [
-          async ({ operation, result, req }) => {
-            const { paystackProxy } = await import('../src/utilities/paystackProxy.js')
-            const secret = process.env.PAYSTACK_SECRET_KEY!
-            if (operation === 'find') {
-              const resp = await paystackProxy({ path: '/refund', secretKey: secret })
-              if (resp.status === 200 && Array.isArray(resp.data)) {
-                return {
-                  docs: resp.data.map((r) => ({
-                    id: r.id.toString(),
-                    transaction: r.transaction.toString(),
-                    amount: r.amount,
-                    status: r.status,
-                    refunded_at: r.refunded_at,
-                  })),
-                  totalDocs: resp.data.length,
-                }
-              }
-            }
-            if (operation === 'findByID') {
-              const id = result?.doc?.id
-              const resp = await paystackProxy({ path: `/refund/${id}`, secretKey: secret })
-              if (resp.status === 200 && resp.data) {
-                const r = resp.data
-                return {
-                  doc: {
-                    id: r.id.toString(),
-                    transaction: r.transaction.toString(),
-                    amount: r.amount,
-                    status: r.status,
-                    refunded_at: r.refunded_at,
-                  },
-                }
-              }
-            }
-          },
-        ],
-      },
     },
-    // Read-only: Orders
+
+    // ---- Read-Only: Order ----
     {
       slug: 'order',
       labels: { singular: 'Order', plural: 'Orders' },
@@ -184,96 +110,24 @@ export default buildConfig({
         { name: 'amount', type: 'number', label: 'Amount' },
         { name: 'currency', type: 'text', label: 'Currency' },
         { name: 'status', type: 'text', label: 'Status' },
+        { name: 'customer_code', type: 'text', label: 'Customer Code' },
+        { name: 'created_at', type: 'text', label: 'Created At' },
       ],
-      hooks: {
-        afterOperation: [
-          async ({ operation, result, req }) => {
-            const { paystackProxy } = await import('../src/utilities/paystackProxy.js')
-            const secret = process.env.PAYSTACK_SECRET_KEY!
-            if (operation === 'find') {
-              const resp = await paystackProxy({ path: '/order', secretKey: secret })
-              if (resp.status === 200 && Array.isArray(resp.data)) {
-                return {
-                  docs: resp.data.map((o) => ({
-                    id: o.id.toString(),
-                    amount: o.amount,
-                    currency: o.currency,
-                    status: o.status,
-                  })),
-                  totalDocs: resp.data.length,
-                }
-              }
-            }
-            if (operation === 'findByID') {
-              const id = result?.doc?.id
-              const resp = await paystackProxy({ path: `/order/${id}`, secretKey: secret })
-              if (resp.status === 200 && resp.data) {
-                const o = resp.data
-                return {
-                  doc: {
-                    id: o.id.toString(),
-                    amount: o.amount,
-                    currency: o.currency,
-                    status: o.status,
-                  },
-                }
-              }
-            }
-          },
-        ],
-      },
     },
-    // Read-only: Subscriptions
+
+    // ---- Read-Only: Subscription ----
     {
       slug: 'subscription',
       labels: { singular: 'Subscription', plural: 'Subscriptions' },
       access: { create: () => false, update: () => false, delete: () => false, read: () => true },
       fields: [
-        { name: 'id', type: 'text', label: 'Subscription ID' },
-        { name: 'status', type: 'text', label: 'Status' },
         { name: 'plan', type: 'text', label: 'Plan Code' },
-        { name: 'customer', type: 'text', label: 'Customer Code' },
+        { name: 'customer_code', type: 'text', label: 'Customer Code' },
+        { name: 'status', type: 'text', label: 'Status' },
         { name: 'start', type: 'text', label: 'Start Date' },
+        { name: 'amount', type: 'number', label: 'Amount' },
+        { name: 'subscription_code', type: 'text', label: 'Subscription Code' },
       ],
-      hooks: {
-        afterOperation: [
-          async ({ operation, result, req }) => {
-            const { paystackProxy } = await import('../src/utilities/paystackProxy.js')
-            const secret = process.env.PAYSTACK_SECRET_KEY!
-            if (operation === 'find') {
-              const resp = await paystackProxy({ path: '/subscription', secretKey: secret })
-              if (resp.status === 200 && Array.isArray(resp.data)) {
-                return {
-                  docs: resp.data.map((s) => ({
-                    id: s.id.toString(),
-                    status: s.status,
-                    plan: s.plan,
-                    customer: s.customer,
-                    start: new Date(s.start * 1000).toISOString(),
-                  })),
-                  totalDocs: resp.data.length,
-                }
-              }
-            }
-            if (operation === 'findByID') {
-              const id = result?.doc?.id
-              const resp = await paystackProxy({ path: `/subscription/${id}`, secretKey: secret })
-              if (resp.status === 200 && resp.data) {
-                const s = resp.data
-                return {
-                  doc: {
-                    id: s.id.toString(),
-                    status: s.status,
-                    plan: s.plan,
-                    customer: s.customer,
-                    start: new Date(s.start * 1000).toISOString(),
-                  },
-                }
-              }
-            }
-          },
-        ],
-      },
     },
   ],
   db: mongooseAdapter({ url: process.env.DATABASE_URI || '' }),
@@ -289,9 +143,10 @@ export default buildConfig({
       webhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET,
       rest: true,
       logs: true,
+      blacklistCustomerOption: true,
       defaultCurrency: 'NGN',
-      updateExistingProductsOnCurrencyChange: false,
       sync: [
+        // Example: Product, Plan, Customer as before...
         {
           collection: 'product',
           paystackResourceType: 'product',
@@ -323,10 +178,103 @@ export default buildConfig({
             { fieldPath: 'phone', paystackProperty: 'phone' },
           ],
         },
+        // NEW: Transaction, Refund, Order, Subscription
+        {
+          collection: 'transaction',
+          paystackResourceType: 'transaction',
+          paystackResourceTypeSingular: 'transaction',
+          fields: [
+            { fieldPath: 'status', paystackProperty: 'status' },
+            { fieldPath: 'reference', paystackProperty: 'reference' },
+            { fieldPath: 'amount', paystackProperty: 'amount' },
+            { fieldPath: 'currency', paystackProperty: 'currency' },
+            { fieldPath: 'paid_at', paystackProperty: 'paid_at' },
+            { fieldPath: 'customer_code', paystackProperty: 'customer.customer_code' },
+            { fieldPath: 'channel', paystackProperty: 'channel' },
+          ],
+        },
+        {
+          collection: 'refund',
+          paystackResourceType: 'refund',
+          paystackResourceTypeSingular: 'refund',
+          fields: [
+            { fieldPath: 'transaction', paystackProperty: 'transaction' },
+            { fieldPath: 'amount', paystackProperty: 'amount' },
+            { fieldPath: 'status', paystackProperty: 'status' },
+            { fieldPath: 'currency', paystackProperty: 'currency' },
+            { fieldPath: 'refunded_at', paystackProperty: 'refunded_at' },
+            { fieldPath: 'customer_note', paystackProperty: 'customer_note' },
+            { fieldPath: 'merchant_note', paystackProperty: 'merchant_note' },
+          ],
+        },
+        {
+          collection: 'order',
+          paystackResourceType: 'order',
+          paystackResourceTypeSingular: 'order',
+          fields: [
+            { fieldPath: 'id', paystackProperty: 'id' },
+            { fieldPath: 'amount', paystackProperty: 'amount' },
+            { fieldPath: 'currency', paystackProperty: 'currency' },
+            { fieldPath: 'status', paystackProperty: 'status' },
+            { fieldPath: 'customer_code', paystackProperty: 'customer.customer_code' },
+            { fieldPath: 'created_at', paystackProperty: 'created_at' },
+          ],
+        },
+        {
+          collection: 'subscription',
+          paystackResourceType: 'subscription',
+          paystackResourceTypeSingular: 'subscription',
+          fields: [
+            { fieldPath: 'plan', paystackProperty: 'plan' },
+            { fieldPath: 'customer_code', paystackProperty: 'customer.customer_code' },
+            { fieldPath: 'status', paystackProperty: 'status' },
+            { fieldPath: 'start', paystackProperty: 'start' },
+            { fieldPath: 'amount', paystackProperty: 'amount' },
+            { fieldPath: 'subscription_code', paystackProperty: 'subscription_code' },
+          ],
+        },
       ],
     }),
   ],
   secret: process.env.PAYLOAD_SECRET || 'test-secret_key',
   sharp,
   typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },
+
+  // For blacklist customers two way sync fro Paystack to Payload...Runs only if blacklistCustomerOption is true
+  /* onInit: async (payload) => {
+    const pluginConfig = (payload.config.plugins.find((p) => p?.name === 'paystackPlugin') ||
+      {}) as PaystackPluginConfig
+
+    // Dosent require pollingInterval parameter to be set
+    if (pluginConfig.blacklistCustomerOption) {
+      // Run immediately
+      await syncBlacklistCustomers({
+        payload,
+        pluginConfig,
+        logger: {
+          info: (msg) => payload.logger.info(msg),
+          error: (msg) => payload.logger.error(msg),
+        },
+        pageSize: pluginConfig.pollingPageSize,
+        maxPages: pluginConfig.pollingMaxPages,
+      })
+
+      // Set up polling interval (defaults to every hour if not specified) reuires pollingInterval parameter to be set 
+      setInterval(
+        () => {
+          syncBlacklistCustomers({
+            payload,
+            pluginConfig,
+            logger: {
+              info: (msg) => payload.logger.info(msg),
+              error: (msg) => payload.logger.error(msg),
+            },
+            pageSize: pluginConfig.pollingPageSize,
+            maxPages: pluginConfig.pollingMaxPages,
+          })
+        },
+        pluginConfig.pollingInterval || 60 * 60 * 1000,
+      )
+    }
+  }, */
 })

@@ -2,7 +2,7 @@ import type { CollectionAfterDeleteHook } from 'payload'
 import type { PaystackPluginConfig } from '../types.js'
 import { paystackProxy } from '../utilities/paystackProxy.js'
 import { PaystackPluginLogger } from '../utilities/logger.js'
-import { buildPath } from '../routes/rest.js'
+import { buildPath } from '../utilities/buildPath.js'
 
 export const deleteFromPaystack =
   (pluginConfig: PaystackPluginConfig): CollectionAfterDeleteHook =>
@@ -34,6 +34,16 @@ export const deleteFromPaystack =
 
     const { paystackResourceType } = syncConfig
     const id = doc.paystackID as string
+
+    // Skip if no paystackID exists
+    if (!id) {
+      if (pluginConfig.logs) {
+        logger.info(
+          `[paystack-plugin] [delete] No paystackID found, skipping Paystack delete for ${collection.slug}`,
+        )
+      }
+      return
+    }
 
     if (pluginConfig.logs) {
       logger.info(`[paystack-plugin] [delete-hook] Paystack ID to delete: ${id}`)

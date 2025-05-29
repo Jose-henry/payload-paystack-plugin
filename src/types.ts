@@ -39,13 +39,6 @@ export type PaystackPluginConfig = {
   webhookSecret?: string
   /** Sync configuration per collection */
   sync?: SyncConfig[]
-  /** Override the slugs used for the read-only collections */
-  resourceSlugs?: Partial<{
-    transaction: string
-    refund: string
-    order: string
-    subscription: string
-  }>
   /** Custom webhook handlers */
   webhooks?: PaystackWebhookHandler | PaystackWebhookHandlers
   /**
@@ -60,12 +53,18 @@ export type PaystackPluginConfig = {
    * @default 'NGN'
    */
   defaultCurrency?: 'NGN' | 'USD' | 'GHS' | 'ZAR' | 'KES'
+  blacklistCustomerOption?: boolean
+
+  pollingPageSize?: number
+  pollingMaxPages?: number
   /**
-   * When true, updates all existing products in Paystack with the new currency
-   * when defaultCurrency changes. Use with caution as this will affect all products.
-   * @default false
+   * Interval in milliseconds for polling Paystack to sync blacklisted customers.
+   * Examples:
+   * - 60 * 60 * 1000 = 3,600,000ms (1 hour)
+   * - 5 * 60 * 1000 = 300,000ms (5 minutes)
+   * - 24 * 60 * 60 * 1000 = 86,400,000ms (24 hours)
    */
-  updateExistingProductsOnCurrencyChange?: boolean
+  pollingInterval?: number
 }
 
 export type SanitizedPaystackPluginConfig = {
@@ -84,3 +83,11 @@ export type PaystackProxy = (args: {
   message?: string
   status: number
 }>
+
+/**
+ * Example: Paystack webhook event shape (generic).
+ */
+export type PaystackWebhookEvent = {
+  event: string // e.g. "transaction.success"
+  data: any // event payload from Paystack (typed further per event type)
+}

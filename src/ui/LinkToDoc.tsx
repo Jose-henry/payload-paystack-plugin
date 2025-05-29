@@ -17,7 +17,12 @@ export const LinkToDoc: UIFieldClientComponent = (props) => {
 
   // Build plural dashboard resource path (e.g. 'customers', 'plans')
   const resourcePlural = `${paystackResourceType}s`
-  const dashboardURL = `https://dashboard.paystack.com/#/${resourcePlural}/${paystackID}`
+
+  // Special case for plans - add /subscriptions after the ID
+  const dashboardURL =
+    paystackResourceType === 'plan'
+      ? `https://dashboard.paystack.com/#/${resourcePlural}/${paystackID}/subscriptions`
+      : `https://dashboard.paystack.com/#/${resourcePlural}/${paystackID}`
 
   return (
     <div>

@@ -31,11 +31,12 @@ export const getFields = ({ collection, pluginConfig, syncConfig }: GetFieldsArg
     name: 'skipSync',
     type: 'checkbox',
     label: 'Skip Sync',
-    defaultValue: true,
+    defaultValue: false,
     admin: {
       position: 'sidebar',
       description:
         'When checked (default), changes to this record will not be synced to Paystack. Uncheck to enable syncing.',
+      condition: (data) => !!data?.id,
     },
   }
 

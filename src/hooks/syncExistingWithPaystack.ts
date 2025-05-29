@@ -3,7 +3,7 @@ import type { PaystackPluginConfig } from '../types.js'
 import { deepen } from '../utilities/deepen.js'
 import { paystackProxy } from '../utilities/paystackProxy.js'
 import { PaystackPluginLogger } from '../utilities/logger.js'
-import { buildPath } from '../routes/rest.js'
+import { buildPath } from '../utilities/buildPath.js'
 
 export const syncExistingWithPaystack =
   (pluginConfig: PaystackPluginConfig): CollectionAfterChangeHook =>
@@ -29,17 +29,21 @@ export const syncExistingWithPaystack =
       req.method !== 'PATCH'
     ) {
       if (pluginConfig.logs) {
-        logger.info(
-          `[paystack-plugin] [update-hook] Skipping sync hook due to: ${[
-            !syncConfig && 'no sync config',
-            pluginConfig.testMode && 'test mode',
-            doc.skipSync && 'skipSync flag',
-            operation !== 'update' && 'not an update operation',
-            req.method !== 'PATCH' && 'not a PATCH request',
-          ]
-            .filter(Boolean)
-            .join(', ')}`,
-        )
+        // Only show relevant skip conditions
+        const skipReasons = []
+        if (!syncConfig) skipReasons.push('no sync config')
+        if (pluginConfig.testMode) skipReasons.push('test mode')
+        if (doc.skipSync) skipReasons.push('skipSync flag')
+        if (operation !== 'update' && operation !== 'create')
+          skipReasons.push('not an update operation')
+        if (req.method !== 'PATCH' && req.method !== 'POST') skipReasons.push('not a PATCH request')
+
+        // Only log if there are actual skip reasons
+        if (skipReasons.length > 0) {
+          logger.info(
+            `[paystack-plugin] [update-hook] Skipping sync hook due to: ${skipReasons.join(', ')}`,
+          )
+        }
       }
       return doc
     }

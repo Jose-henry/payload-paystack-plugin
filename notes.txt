@@ -1,209 +1,144 @@
-# Paystack Integration Documentation
-====================================
+# Paystack Plugin for Payload CMS — Implementation Notes
 
 ## Currency & Amount Handling
-----------------------------
 
-### Supported Currencies
-- NGN (Nigerian Naira) - subunit: Kobo
-- USD (US Dollar) - subunit: Cent
-- GHS (Ghanaian Cedi) - subunit: Pesewa
-- ZAR (South African Rand) - subunit: Cent
-- KES (Kenyan Shilling) - subunit: Cent
+* Supported: NGN (Naira, Kobo), USD (Dollar, Cent), GHS (Cedi, Pesewa), ZAR (Rand, Cent), KES (Shilling, Cent)
+* Amounts are **automatically converted to subunits** (×100, e.g., Naira to Kobo) for create and update operations. This is handled internally by the plugin.
+* In **test mode** (`sk_test_xxx`), only NGN is enabled by default. Other currencies require switching to live mode and activation on your Paystack dashboard.
+* In **live mode** (`sk_live_xxx`), you can enable additional currencies in your Paystack dashboard.
 
-### Amount Conversion
-1. Create Operations:
-   - Automatic conversion to subunits (×100)
-   - Example: 1000 NGN → 100000 kobo
-   - Handled by beforeValidate hook on create
-
-2. Update Operations:
-   - No conversion (sent as-is)
-   - Example: 1000 NGN stays as 1000 NGN
-   - Prevents double conversion
-
-### Currency Configuration
-1. Test Mode (sk_test_ keys):
-   - Only NGN supported by default
-   - Other currencies require live mode
-
-2. Live Mode (sk_live_ keys):
-   - NGN supported by default
-   - Other currencies need dashboard activation
-   - Enable in Paystack Dashboard > Settings > API Keys & Webhooks
+---
 
 ## API Integration
-----------------
 
-### Endpoints & Methods
-1. Products:
-   - Create: POST /product
-   - Update: PUT /product/:id (numeric ID)
-   - Delete: DELETE /product/:id (numeric ID)
+* Use the `/paystack/rest` endpoint to proxy any Paystack API call securely from your authenticated Payload app (browser or backend).
+* Use `/paystack/webhook` to receive and process incoming Paystack webhook events. Set this in your Paystack dashboard as: `https://yourdomain.com/paystack/webhook` (for local dev, tunnel via ngrok).
+* **Collections are mapped to Paystack resources** in the plugin `sync` config. You control if they're editable or read-only in Payload.
 
-2. Plans:
-   - Create: POST /plan
-   - Update: PUT /plan/:code (plan code)
-   - Delete: DELETE /plan/:code (plan code)
+---
 
-3. Customers:
-   - Create: POST /customer
-   - Update: PUT /customer/:code (customer code)
-   - Delete: DELETE /customer/:code (customer code)
+## Deleting Customers & Blacklisting
 
-### ID Management
-- Products: Numeric IDs (e.g., 12345)
-- Plans: Plan codes (e.g., PLN_abc123)
-- Customers: Customer codes (e.g., CUS_xyz789)
+* **Deleting a customer in Payload only blacklists (risk\_action = "deny") in Paystack**—actual customer deletion via API is not supported by Paystack. Your Payload customer is marked as deleted and the equivalent Paystack customer is blacklisted.
+* You can enable a "Blacklisted on Paystack" toggle in your customer collection via `blacklistCustomerOption: true`.
+* Blacklist status is not synced via webhooks (Paystack limitation), but you can enable polling with an `onInit` function (see README for example) to fetch blacklist status from Paystack at regular intervals.
 
-## Plugin Features
-----------------
+DELETE BEHAVIOR:
+- Deleting a record in Payload is destructive and will:
+  1. Delete from Payload
+  2. If paystackID exists, attempt to delete/blacklist in Paystack
+  3. This happens regardless of skipSync flag
+- skipSync only prevents creation/updates, not deletion
+- If no paystackID exists, no Paystack API call is made
+- For customers, deletion is converted to blacklisting
+- For other resources, actual deletion is attempted
 
-### Core Functionality
-1. Collection Synchronization:
-   - Automatic sync with Paystack resources
-   - Create → POST
-   - Update → PUT
-   - Delete → DELETE (or blacklist)
+---
 
-2. Read-only Collections:
-   - Transactions
-   - Refunds
-   - Orders
-   - Subscriptions
-   - Direct Paystack API integration
+## Read-Only Collections
 
-3. API Endpoints:
-   - REST Proxy: /api/paystack/rest
-   - Webhook: /api/paystack/webhook
+* Collections like `transaction`, `refund`, `order`, and `subscription` are best set to read-only in Payload for data validity, as these are synced directly from Paystack. However, you decide the access level—use Payload's `access` property.
+* Example:
 
-### Resource Management
-1. Customer Sync:
-   - Full CRUD operations
-   - Blacklist toggle support
-   - Risk action management
-
-2. Plan Sync:
-   - Complete plan lifecycle
-   - Plan code storage
-   - Amount handling
-
-3. Product Sync:
-   - Product management
-   - Currency support
-   - Price conversion
-
-## Configuration
---------------
-
-### Plugin Setup
-```typescript
-paystackPlugin({
-  paystackSecretKey: 'sk_xxx',
-  webhookSecret: 'whsec_xxx',
-  rest: true,
-  logs: true,
-  defaultCurrency: 'NGN',
-  updateExistingProductsOnCurrencyChange: false,
-  sync: [
-    // Collection sync configs
-  ]
-})
-```
-
-### Field Mapping
 ```typescript
 {
-  fieldPath: 'name',
-  paystackProperty: 'name'
+  slug: 'transaction',
+  access: {
+    create: () => false,
+    update: () => false,
+    delete: () => false,
+    read: () => true,
+  },
+  fields: [ ... ]
 }
 ```
 
-## Best Practices
----------------
+* These are synced by the plugin via REST, polling, or webhooks, according to your `sync` config.
 
-### Do's
-1. Map all Payload fields to correct Paystack properties
-2. Use "View in Paystack" link for verification
-3. Enable logs during debugging
-4. Override resourceSlugs if needed
-5. Guard REST proxy endpoints
+---
 
-### Don'ts
-1. Assume DELETE works on all resources
-2. Create custom webhook endpoints
-3. Expose REST proxy publicly
-4. Modify read-only collections
+## Plugin Configuration Example
 
-## Troubleshooting
-----------------
-
-### Common Issues
-1. Missing paystackID:
-   - Verify field mappings
-   - Check Paystack response logs
-
-2. Updates not reflecting:
-   - Confirm field changes
-   - Check skipSync flag
-
-3. Empty read-only collections:
-   - Verify resourceSlugs
-   - Check API proxy response
-
-4. Webhook issues:
-   - Verify webhook URL and secret
-   - Check signature verification logs
-
-## Error Handling
----------------
-
-### API Errors
-1. Validation:
-   - Invalid ID/code format
-   - Currency not enabled
-   - Resource not found
-
-2. Sync Errors:
-   - Failed updates
-   - Failed deletes
-   - Missing fields
-
-### Debug Logging
-Enable with:
 ```typescript
 paystackPlugin({
-  logs: true
+  paystackSecretKey: 'sk_test_xxx',
+  webhookSecret: 'sk_test_xxx',
+  rest: true,
+  logs: true,
+  blacklistCustomerOption: true,
+  testMode: false, // If true, requests are simulated only
+  defaultCurrency: 'NGN',
+  pollingInterval: 60 * 60 * 1000, // Poll blacklist status every hour
+  sync: [ ... ]
 })
 ```
 
-Logs include:
-- API requests/responses
-- Sync operations
-- Webhook events
-- Error details
+---
 
-## Limitations
--------------
+## Test Mode & Live Mode
 
-1. Customer Deletion:
-   - Not supported by Paystack
-   - Plugin handles 404s gracefully
+* Use `sk_test_xxx` in development and set test mode in your Paystack dashboard.
+* Use `sk_live_xxx` in production/live mode and activate additional currencies as needed.
+* The plugin parameter `testMode: true` simulates all Paystack requests (no live API calls)—useful for testing and CI.
 
-2. Rate Limits:
-   - API is rate-limited
-   - Plugin includes retry logic
+---
 
-3. Data Protection:
-   - Read-only collection restrictions
-   - Field conflict prevention
+## REST Proxy Usage
+
+```js
+fetch('/paystack/rest', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  credentials: 'include',
+  body: JSON.stringify({
+    paystackPath: '/transaction/initialize',
+    paystackMethod: 'POST',
+    paystackArgs: [{ email: 'demo@domain.com', amount: 10000 }]
+  })
+})
+```
+
+---
+
+## Best Practices & Troubleshooting
+
+* Map all fields correctly in your sync config.
+* Make collections read-only if you want true Paystack data integrity.
+* Enable logs for development/debugging.
+* Always use your secret key for both `paystackSecretKey` and `webhookSecret`.
+* Use polling if you want two-way blacklist sync. Webhooks do **not** cover blacklist/risk actions.
+* Test webhooks locally with ngrok.
+
+---
+
+## Limitations & Caveats
+
+* Customer deletion in Paystack is not possible; the plugin blacklists instead.
+* Rate limits apply for the API; plugin includes retry logic.
+* Data integrity for transaction/refund/order/subscription is best maintained by making those collections read-only in Payload.
+* If you see missing data or unsynced fields, check logs and your field mappings.
+
+---
+
+## Developer Tips
+
+* Always guard your REST endpoint—do not expose it publicly.
+* Keep your secret keys safe.
+* Both environment variables should be set to your Paystack secret key:
+
+```env
+PAYSTACK_SECRET_KEY=sk_test_xxx
+PAYSTACK_WEBHOOK_SECRET=sk_test_xxx
+```
+
+* If you want two-way blacklist sync, set up an `onInit` handler as shown in the README.
+
+---
 
 ## Resources
------------
 
-- Paystack API: https://paystack.com/docs/api
-- Payload Hooks: https://payloadcms.com/docs/hooks
-- Example Integration: (link to project)
+* [Paystack API Docs](https://paystack.com/docs/api)
+* [Payload CMS Docs](https://payloadcms.com/docs)
 
 ──────────────────────────
 Happy coding! 🚀

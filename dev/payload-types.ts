@@ -132,8 +132,14 @@ export interface CustomerAuthOperations {
 export interface Plan {
   id: string;
   paystackID?: string | null;
+  /**
+   * When checked (default), changes to this record will not be synced to Paystack. Uncheck to enable syncing.
+   */
   skipSync?: boolean | null;
   title?: string | null;
+  /**
+   * Amount must be equal to or greater than 100 for Paystack
+   */
   amount?: number | null;
   updatedAt: string;
   createdAt: string;
@@ -145,12 +151,15 @@ export interface Plan {
 export interface Customer {
   id: string;
   paystackID?: string | null;
+  /**
+   * When checked (default), changes to this record will not be synced to Paystack. Uncheck to enable syncing.
+   */
   skipSync?: boolean | null;
   name: string;
   lastName?: string | null;
   phone?: string | null;
   /**
-   * If checked, this customer will be blocked in Paystack (risk_action = deny).
+   * If checked this customer will be blocked in Paystack
    */
   blacklisted?: boolean | null;
   updatedAt: string;
@@ -189,12 +198,14 @@ export interface Media {
 export interface Product {
   id: string;
   paystackID?: string | null;
+  /**
+   * When checked (default), changes to this record will not be synced to Paystack. Uncheck to enable syncing.
+   */
   skipSync?: boolean | null;
   name: string;
   description?: string | null;
   price: number;
   quantity: number;
-  paystackPlanId?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -204,11 +215,18 @@ export interface Product {
  */
 export interface Transaction {
   id: string;
+  paystackID?: string | null;
+  /**
+   * When checked (default), changes to this record will not be synced to Paystack. Uncheck to enable syncing.
+   */
+  skipSync?: boolean | null;
   status?: string | null;
+  reference?: string | null;
   amount?: number | null;
   currency?: string | null;
   paid_at?: string | null;
-  customer?: string | null;
+  customer_code?: string | null;
+  channel?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -218,10 +236,18 @@ export interface Transaction {
  */
 export interface Refund {
   id: string;
+  paystackID?: string | null;
+  /**
+   * When checked (default), changes to this record will not be synced to Paystack. Uncheck to enable syncing.
+   */
+  skipSync?: boolean | null;
   transaction?: string | null;
   amount?: number | null;
   status?: string | null;
+  currency?: string | null;
   refunded_at?: string | null;
+  customer_note?: string | null;
+  merchant_note?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -230,10 +256,17 @@ export interface Refund {
  * via the `definition` "order".
  */
 export interface Order {
+  paystackID?: string | null;
+  /**
+   * When checked (default), changes to this record will not be synced to Paystack. Uncheck to enable syncing.
+   */
+  skipSync?: boolean | null;
   id: string;
   amount?: number | null;
   currency?: string | null;
   status?: string | null;
+  customer_code?: string | null;
+  created_at?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -243,10 +276,17 @@ export interface Order {
  */
 export interface Subscription {
   id: string;
-  status?: string | null;
+  paystackID?: string | null;
+  /**
+   * When checked (default), changes to this record will not be synced to Paystack. Uncheck to enable syncing.
+   */
+  skipSync?: boolean | null;
   plan?: string | null;
-  customer?: string | null;
+  customer_code?: string | null;
+  status?: string | null;
   start?: string | null;
+  amount?: number | null;
+  subscription_code?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -392,7 +432,6 @@ export interface ProductSelect<T extends boolean = true> {
   description?: T;
   price?: T;
   quantity?: T;
-  paystackPlanId?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -401,12 +440,15 @@ export interface ProductSelect<T extends boolean = true> {
  * via the `definition` "transaction_select".
  */
 export interface TransactionSelect<T extends boolean = true> {
-  id?: T;
+  paystackID?: T;
+  skipSync?: T;
   status?: T;
+  reference?: T;
   amount?: T;
   currency?: T;
   paid_at?: T;
-  customer?: T;
+  customer_code?: T;
+  channel?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -415,11 +457,15 @@ export interface TransactionSelect<T extends boolean = true> {
  * via the `definition` "refund_select".
  */
 export interface RefundSelect<T extends boolean = true> {
-  id?: T;
+  paystackID?: T;
+  skipSync?: T;
   transaction?: T;
   amount?: T;
   status?: T;
+  currency?: T;
   refunded_at?: T;
+  customer_note?: T;
+  merchant_note?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -428,10 +474,14 @@ export interface RefundSelect<T extends boolean = true> {
  * via the `definition` "order_select".
  */
 export interface OrderSelect<T extends boolean = true> {
+  paystackID?: T;
+  skipSync?: T;
   id?: T;
   amount?: T;
   currency?: T;
   status?: T;
+  customer_code?: T;
+  created_at?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -440,11 +490,14 @@ export interface OrderSelect<T extends boolean = true> {
  * via the `definition` "subscription_select".
  */
 export interface SubscriptionSelect<T extends boolean = true> {
-  id?: T;
-  status?: T;
+  paystackID?: T;
+  skipSync?: T;
   plan?: T;
-  customer?: T;
+  customer_code?: T;
+  status?: T;
   start?: T;
+  amount?: T;
+  subscription_code?: T;
   updatedAt?: T;
   createdAt?: T;
 }

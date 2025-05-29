@@ -1,6 +1,6 @@
 import type { PaystackPluginConfig } from '../types.js'
 import { paystackProxy } from './paystackProxy.js'
-import { buildPath } from '../routes/rest.js'
+import { buildPath } from '../utilities/buildPath.js'
 
 export async function updateProductsCurrency(
   pluginConfig: PaystackPluginConfig,

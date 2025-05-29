@@ -3,7 +3,7 @@ import type { PaystackPluginConfig } from '../types.js'
 import { deepen } from '../utilities/deepen.js'
 import { paystackProxy } from '../utilities/paystackProxy.js'
 import { PaystackPluginLogger } from '../utilities/logger.js'
-import { buildPath } from '../routes/rest.js'
+import { buildPath } from '../utilities/buildPath.js'
 
 export const createNewInPaystack =
   (pluginConfig: PaystackPluginConfig): CollectionBeforeValidateHook =>
@@ -92,7 +92,11 @@ export const createNewInPaystack =
 
     if (response.status >= 200 && response.status < 300 && codeValue) {
       // For products, store the numeric ID instead of the product_code
-      if (syncConfig.paystackResourceType === 'product' && response.data?.id) {
+      if (
+        (syncConfig.paystackResourceType === 'product' ||
+          syncConfig.paystackResourceType === 'plan') &&
+        response.data?.id
+      ) {
         data!.paystackID = response.data.id.toString()
       } else {
         data!.paystackID = codeValue

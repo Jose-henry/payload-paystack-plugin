@@ -3,6 +3,11 @@ import type { PaystackPluginConfig } from '../types.js'
 import { handleWebhooks } from '../webhooks/index.js'
 import { PaystackPluginLogger } from '../utilities/logger.js'
 
+/**
+ * Paystack webhook endpoint. Verifies signature,
+ * always performs native sync (for read-only collections),
+ * and then runs user custom handler if present.
+ */
 export const paystackWebhooks = async (args: {
   req: PayloadRequest
   config: PayloadConfig
@@ -31,6 +36,7 @@ export const paystackWebhooks = async (args: {
 
     const event = JSON.parse(rawBody)
 
+    // --- (1) Native sync for read-only collections & any configured collection ---
     await handleWebhooks({
       event,
       req,
@@ -39,6 +45,7 @@ export const paystackWebhooks = async (args: {
       payload: req.payload,
     })
 
+    // --- (2) User custom webhook handler support (function or map of events) ---
     if (typeof webhooks === 'function') {
       await webhooks({
         event,
