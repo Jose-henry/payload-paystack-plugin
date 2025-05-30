@@ -26,13 +26,11 @@ Supports two-way sync, REST/webhook integration, and advanced customer blacklist
 ## Installation
 
 ```bash
-npm install paystack-payload-plugin
-
-# or
-yarn add paystack-payload-plugin
-
-# or
 pnpm add paystack-payload-plugin
+
+# or
+
+npm install paystack-payload-plugin
 
 ```
 
@@ -103,9 +101,7 @@ The plugin is compatible with all major package managers, but each has its own r
    - Use `pnpm add paystack-payload-plugin@latest`
    - Best compatibility with the plugin's configuration
 
-3. **yarn**
-   - Use `yarn add paystack-payload-plugin@latest`
-   - May require `yarn add paystack-payload-plugin@latest --ignore-engines` if you see engine warnings
+
 
 ### Common Installation Issues
 
@@ -131,8 +127,8 @@ The plugin is compatible with all major package managers, but each has its own r
 
 ```ts
 import { buildConfig } from 'payload'
-import { paystackPlugin, syncBlacklistCustomers } from 'paystack-payload-cms'
-import type { PaystackPluginConfig } from 'paystack-payload-cms/types'
+import { paystackPlugin } from 'paystack-payload-plugin'
+import type { PaystackPluginConfig } from 'paystack-payload-plugin/types'
 
 export default buildConfig({
   // ...your config

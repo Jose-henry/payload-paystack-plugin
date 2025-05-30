@@ -59,7 +59,7 @@ You have three ways to interact with Paystack:
 
 3. **Using the paystackProxy Utility**:
    ```ts
-   import { paystackProxy } from 'paystack-payload-cms/utilities';
+   import { paystackProxy } from 'paystack-payload-plugin/utilities';
    
    const response = await paystackProxy({
      paystackPath: '/transaction/initialize',
