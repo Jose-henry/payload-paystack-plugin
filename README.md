@@ -3,6 +3,8 @@
 A robust [Payload CMS](https://payloadcms.com/) plugin to sync and manage your [Paystack](https://paystack.com/) resources directly from Payload.
 Supports two-way sync, REST/webhook integration, and advanced customer blacklisting—with full control over how you manage your collections!
 
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/Jose-henry/payload-paystack-plugin)
+
 ---
 
 ## Features
