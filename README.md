@@ -86,8 +86,17 @@ The plugin is compatible with all major package managers, but each has its own r
 
 1. **npm**
    - Requires npm version 7 or higher
-   - Use `npm install paystack-payload-plugin@latest`
-   - If you encounter issues, try `npm install --legacy-peer-deps`
+   - If you encounter the "Cannot read properties of null (reading 'matches')" error:
+     ```bash
+     # First, clear npm cache
+     npm cache clean --force
+     
+     # Then try installing with legacy peer deps
+     npm install paystack-payload-plugin@latest --legacy-peer-deps
+     
+     # If that doesn't work, try with force
+     npm install paystack-payload-plugin@latest --force
+     ```
 
 2. **pnpm (Recommended)**
    - Works out of the box
@@ -97,6 +106,24 @@ The plugin is compatible with all major package managers, but each has its own r
 3. **yarn**
    - Use `yarn add paystack-payload-plugin@latest`
    - May require `yarn add paystack-payload-plugin@latest --ignore-engines` if you see engine warnings
+
+### Common Installation Issues
+
+1. **npm "matches" Error**
+   - This is a known npm issue with dependency resolution
+   - Try the solutions above in order:
+     1. Clear npm cache and retry
+     2. Use --legacy-peer-deps
+     3. Use --force
+     4. Switch to pnpm (recommended)
+
+2. **TypeScript Errors**
+   - Make sure you have TypeScript installed in your project
+   - The plugin requires TypeScript 4.5 or higher
+
+3. **Peer Dependency Warnings**
+   - These are normal and won't affect functionality
+   - The plugin supports React 16.8 through 19.x
 
 ---
 
