@@ -36,6 +36,68 @@ pnpm add paystack-payload-plugin
 
 ```
 
+## Troubleshooting Installation
+
+If you encounter installation issues, try these solutions:
+
+1. **Using pnpm (Recommended)**
+   ```bash
+   pnpm add paystack-payload-plugin@latest
+   ```
+
+2. **Using npm with legacy peer deps**
+   ```bash
+   npm install paystack-payload-plugin@latest --legacy-peer-deps
+   ```
+
+3. **Clear npm cache and retry**
+   ```bash
+   npm cache clean --force
+   npm install paystack-payload-plugin@latest
+   ```
+
+4. **Install directly from GitHub**
+   ```bash
+   npm install github:Jose-henry/payload-paystack-plugin
+   ```
+
+If you're still experiencing issues, please:
+1. Check your Node.js version (requires Node.js ^18.20.2 or >=20.9.0)
+2. Ensure you're using a compatible package manager (npm, yarn, or pnpm)
+3. Open an issue on GitHub with your error message and environment details
+
+### Common Warnings
+
+If you see warnings about peer dependencies or build scripts, these are normal and won't affect functionality:
+
+1. **Peer Dependency Warnings**
+   - If you see warnings about React versions, these are expected
+   - The plugin supports React versions 16.8.0 through 19.x
+   - These warnings can be safely ignored
+
+2. **Build Script Warnings**
+   - If using pnpm, you might see warnings about ignored build scripts
+   - This is a security feature of pnpm
+   - Run `pnpm approve-builds` if you need to allow specific build scripts
+
+### Package Manager Compatibility
+
+The plugin is compatible with all major package managers, but each has its own requirements:
+
+1. **npm**
+   - Requires npm version 7 or higher
+   - Use `npm install paystack-payload-plugin@latest`
+   - If you encounter issues, try `npm install --legacy-peer-deps`
+
+2. **pnpm (Recommended)**
+   - Works out of the box
+   - Use `pnpm add paystack-payload-plugin@latest`
+   - Best compatibility with the plugin's configuration
+
+3. **yarn**
+   - Use `yarn add paystack-payload-plugin@latest`
+   - May require `yarn add paystack-payload-plugin@latest --ignore-engines` if you see engine warnings
+
 ---
 
 ## Quick Start: Plugin Setup
