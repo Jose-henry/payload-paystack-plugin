@@ -24,6 +24,79 @@
 
 ---
 
+## Making Paystack API Requests
+
+You have three ways to interact with Paystack:
+
+1. **Using the REST Proxy Endpoint** (`/paystack/rest`):
+   ```ts
+   await fetch('/paystack/rest', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     credentials: 'include',
+     body: JSON.stringify({
+       paystackPath: '/transaction/initialize',
+       paystackMethod: 'POST',
+       paystackArgs: [{ email: 'customer@email.com', amount: 20000 }]
+     })
+   });
+   ```
+
+2. **Direct Paystack API Calls**:
+   ```ts
+   await fetch('https://api.paystack.co/transaction/initialize', {
+     method: 'POST',
+     headers: {
+       'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+       'Content-Type': 'application/json'
+     },
+     body: JSON.stringify({
+       email: 'customer@email.com',
+       amount: 20000
+     })
+   });
+   ```
+
+3. **Using the paystackProxy Utility**:
+   ```ts
+   import { paystackProxy } from 'paystack-payload-cms/utilities';
+   
+   const response = await paystackProxy({
+     paystackPath: '/transaction/initialize',
+     paystackMethod: 'POST',
+     paystackArgs: [{ email: 'customer@email.com', amount: 20000 }]
+   });
+   ```
+
+The `paystackProxy` utility is recommended for backend code as it:
+- Maintains consistent error handling
+- Handles authentication automatically
+- Provides type safety
+- Keeps your Paystack API calls organized
+
+---
+
+## REST Proxy Security Considerations
+
+**⚠️ Important Security Warning:**
+
+The `rest: true` configuration option in the plugin opens up the `/api/paystack/rest` endpoint, allowing authenticated users to directly interact with the Paystack REST API. While convenient for development, this poses significant security risks in production:
+
+1. **Security Risks:**
+   - Any authenticated user gets unrestricted access to Paystack's API
+   - Potential for unauthorized transactions or data exposure
+   - Risk of API key exposure or misuse
+   - No built-in rate limiting or request validation
+
+2. **Development vs Production:**
+   - Development: Using `rest: true` is acceptable for testing
+   - Production: Strongly recommended to create your own secure endpoints
+
+
+Remember: The REST proxy is a development convenience that should be used with extreme caution in production environments.
+
+---
+
 ## Deleting Customers & Blacklisting
 
 * **Deleting a customer in Payload only blacklists (risk\_action = "deny") in Paystack**—actual customer deletion via API is not supported by Paystack. Your Payload customer is marked as deleted and the equivalent Paystack customer is blacklisted.

@@ -160,6 +160,65 @@ The request will be proxied using your secret key.
 
 ---
 
+## Alternative Ways to Make Paystack API Requests
+
+Besides using the REST proxy endpoint, you have two other options to interact with Paystack:
+
+1. **Direct Paystack API Calls:**
+   ```ts
+   // Using fetch
+   await fetch('https://api.paystack.co/transaction/initialize', {
+     method: 'POST',
+     headers: {
+       'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+       'Content-Type': 'application/json'
+     },
+     body: JSON.stringify({
+       email: 'customer@email.com',
+       amount: 20000
+     })
+   });
+   ```
+
+2. **Using the paystackProxy Utility:**
+   ```ts
+   import { paystackProxy } from 'paystack-payload-cms/utilities';
+   
+   // Make API calls using the proxy function
+   const response = await paystackProxy({
+     paystackPath: '/transaction/initialize',
+     paystackMethod: 'POST',
+     paystackArgs: [{ email: 'customer@email.com', amount: 20000 }]
+   });
+   ```
+
+The `paystackProxy` utility provides a convenient way to make Paystack API calls while maintaining consistent error handling and authentication. It's particularly useful when you want to make Paystack API calls from your backend code without exposing the REST endpoint.
+
+---
+
+## Security Considerations for REST Proxy
+
+**⚠️ Important Security Note:**
+
+Setting `rest: true` in your plugin configuration opens up the `/api/paystack/rest` endpoint, allowing authenticated users to directly interact with the Paystack REST API. While this might be convenient for development, in production it poses a security risk because any authenticated user would have unrestricted access to Paystack's API. This could lead to unintended actions or data exposure.
+
+### Best Practices for REST Proxy Usage:
+
+1. **Development vs Production:**
+   - In development: Using `rest: true` is acceptable for testing and development purposes
+   - In production: Consider creating your own secure endpoints instead of using the REST proxy
+
+2. **Alternative Approaches:**
+   - Create specific endpoints for your Paystack operations
+   - Use the Paystack SDK directly in your backend code
+   - Implement proper access controls and rate limiting
+   - Validate all requests before forwarding them to Paystack
+
+
+Remember: The REST proxy is a powerful feature that should be used with caution. Always prioritize security over convenience in production environments.
+
+---
+
 ## Customer Blacklisting
 
 When `blacklistCustomerOption: true`, a "Blacklisted on Paystack" checkbox appears in the Payload admin sidebar for the customer collection.
