@@ -4,6 +4,19 @@
   "description": "A Payload CMS plugin for seamless Paystack integration, featuring two-way sync, webhooks, REST proxy, and customer blacklisting",
   "license": "MIT",
   "sideEffects": false,
+  "keywords": [
+    "payload",
+    "paystack",
+    "cms",
+    "plugin",
+    "typescript",
+    "payments",
+    "saas",
+    "subscriptions",
+    "licensing",
+    "paystack-plugin",
+    "fintech"
+  ],
   "author": "Joseph Henry <josephhenry02@gmail.com>",
   "homepage": "https://github.com/Jose-henry/payload-paystack-plugin",
   "repository": {
@@ -11,38 +24,33 @@
     "url": "https://github.com/Jose-henry/payload-paystack-plugin.git"
   },
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "default": "./dist/index.js"
+      "import": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     },
     "./client": {
-      "types": "./dist/exports/client.d.ts",
-      "import": "./dist/exports/client.js",
-      "require": "./dist/exports/client.js",
-      "default": "./dist/exports/client.js"
+      "import": "./src/client.ts",
+      "types": "./src/client.ts",
+      "default": "./src/client.ts"
     },
     "./rsc": {
-      "types": "./dist/exports/rsc.d.ts",
-      "import": "./dist/exports/rsc.js",
-      "require": "./dist/exports/rsc.js",
-      "default": "./dist/exports/rsc.js"
+      "import": "./src/exports/rsc.ts",
+      "types": "./src/exports/rsc.ts",
+      "default": "./src/exports/rsc.ts"
     }
   },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "files": [
-    "dist",
-    "src/types"
+    "dist"
   ],
   "scripts": {
     "build": "pnpm copyfiles && pnpm build:types && pnpm build:swc",
     "build:swc": "swc ./src -d ./dist --config-file .swcrc --strip-leading-paths",
-    "build:types": "tsc --outDir dist --rootDir ./src --declaration --emitDeclarationOnly",
-    "clean": "rimraf {dist,*.tsbuildinfo}",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist",
+    "clean": "rimraf -g {dist,*.tsbuildinfo}",
     "copyfiles": "copyfiles -u 1 \"src/**/*.{html,css,scss,ttf,woff,woff2,eot,svg,jpg,png,json}\" dist/",
     "dev": "payload run ./dev/server.ts",
     "dev:generate-importmap": "pnpm dev:payload generate:importmap",
@@ -93,5 +101,26 @@
   },
   "peerDependencies": {
     "payload": ">=3.0.0"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "import": "./dist/index.js",
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./client": {
+        "import": "./dist/client.js",
+        "types": "./dist/client.d.ts",
+        "default": "./dist/client.js"
+      },
+      "./rsc": {
+        "import": "./dist/exports/rsc.js",
+        "types": "./dist/exports/rsc.d.ts",
+        "default": "./dist/exports/rsc.js"
+      }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
   }
 }

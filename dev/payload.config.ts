@@ -134,9 +134,9 @@ export default buildConfig({
   db: mongooseAdapter({ url: process.env.DATABASE_URI || '' }),
   editor: lexicalEditor(),
   email: testEmailAdapter,
-  // onInit: async (payload) => {
-  //   await seed(payload)
-  // },
+  onInit: async (payload) => {
+    await seed(payload)
+  },
   plugins: [
     paystackPlugin({
       enabled: true,
@@ -145,9 +145,6 @@ export default buildConfig({
       rest: true,
       logs: true,
       blacklistCustomerOption: true,
-      polling: true,
-      pollingRunImmediately: false,
-      pollingInterval: 5 * 60 * 1000,
       defaultCurrency: 'NGN',
       webhooks: {
         'paymentrequest.success': paymentRequestSuccess,
