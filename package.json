@@ -21,7 +21,7 @@
   "homepage": "https://github.com/Jose-henry/payload-paystack-plugin",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Jose-henry/payload-paystack-plugin.git"
+    "url": "git+https://github.com/Jose-henry/payload-paystack-plugin.git"
   },
   "type": "module",
   "exports": {
