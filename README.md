@@ -26,13 +26,19 @@ Supports two-way sync, REST/webhook integration, and advanced customer blacklist
 ## Installation
 
 ```bash
-pnpm add paystack-payload-plugin
-
+npm install paystack-payload-cms
 # or
-
-npm install paystack-payload-plugin
-
+yarn add paystack-payload-cms
+# or
+pnpm add paystack-payload-cms
 ```
+
+After installation, run:
+```bash
+npx payload generate:importmap
+```
+
+This ensures proper module resolution for the plugin.
 
 ## Troubleshooting Installation
 

@@ -227,3 +227,22 @@ PAYSTACK_WEBHOOK_SECRET=sk_test_xxx
 
 ──────────────────────────
 Happy coding! 🚀
+
+## Installation Steps
+
+1. Install the plugin:
+   ```bash
+   npm install paystack-payload-cms
+   # or
+   yarn add paystack-payload-cms
+   # or
+   pnpm add paystack-payload-cms
+   ```
+
+2. Generate import map:
+   ```bash
+   npx payload generate:importmap
+   ```
+   This step is crucial for proper module resolution.
+
+3. Configure the plugin in your Payload config:
