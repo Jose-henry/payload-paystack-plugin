@@ -2,7 +2,7 @@ import { mongooseAdapter } from '@payloadcms/db-mongodb'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
 import { buildConfig } from 'payload'
-import { paystackPlugin, syncBlacklistCustomers } from '../src/index.js'
+import { paystackPlugin } from '../src/index.js'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
