@@ -3,6 +3,13 @@
   "version": "1.0.10",
   "description": "A Payload CMS plugin for seamless Paystack integration, featuring two-way sync, webhooks, REST proxy, and customer blacklisting",
   "license": "MIT",
+  "sideEffects": false,
+  "author": "Joseph Henry <josephhenry02@gmail.com>",
+  "homepage": "https://github.com/Jose-henry/payload-paystack-plugin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Jose-henry/payload-paystack-plugin.git"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -62,6 +69,10 @@
     "@types/node": "^22.5.4",
     "@types/react": "19.1.0",
     "@types/react-dom": "19.1.2",
+    "@types/dotenv": "^6.1.1",
+    "@paystack/inline-js": "^2.22.0",
+    "sharp": "^0.32.0",
+    "dotenv": "^16.0.0",
     "copyfiles": "2.4.1",
     "cross-env": "^7.0.3",
     "eslint": "^9.23.0",
@@ -81,19 +92,6 @@
     "typescript": "5.7.3"
   },
   "peerDependencies": {
-    "payload": "^3.29.0",
-    "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
-    "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
-  },
-  "engines": {
-    "node": "^18.20.2 || >=20.9.0",
-    "npm": ">=7.0.0",
-    "pnpm": "^9 || ^10"
-  },
-  "dependencies": {
-    "@paystack/inline-js": "^2.22.4",
-    "@types/dotenv": "^6.1.1",
-    "dotenv": "^16.5.0",
-    "sharp": "^0.32.6"
+    "payload": ">=3.0.0"
   }
 }
