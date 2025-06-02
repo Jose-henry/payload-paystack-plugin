@@ -5,7 +5,7 @@
       "/src/exports/client": ["./src/exports/client.ts"]
     },
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
-    "rootDir": "./",
+    "rootDir": "./src",
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -18,9 +18,7 @@
     "incremental": true,
     "emitDeclarationOnly": true,
     "declaration": true,
-    "declarationMap": true,
     "declarationDir": "./dist",
-    "sourceMap": true,
     "outDir": "./dist",
     "target": "ES2022",
     "composite": true,
