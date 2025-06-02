@@ -8,6 +8,13 @@ Supports two-way sync, REST/webhook integration, and advanced customer blacklist
 
 ⭐ **Star this repository** if you find it useful! Your support helps the project grow and encourages further development.
 
+> **⚠️ IMPORTANT: TypeScript Declaration**  
+> To avoid TypeScript declaration errors, create a file named `paystack-payload-plugin.d.ts` in your project's root or `src` directory with the following content:
+> ```typescript
+> declare module 'paystack-payload-plugin';
+> ```
+> This will resolve any TypeScript declaration errors when using the plugin.
+
 > **⚠️ IMPORTANT UPDATE NOTE**  
 > **Changes not HMR and importMap issues have been fixed in the latest version.**  
 > If you were experiencing issues with Hot Module Replacement (HMR) or importMap configuration, please update to the latest version.
