@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
+    "paths": {
+      "/src/exports/client": ["./src/exports/client.ts"]
+    },
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "rootDir": "./",
     "allowJs": true,
@@ -15,6 +18,9 @@
     "incremental": true,
     "emitDeclarationOnly": true,
     "declaration": true,
+    "declarationMap": true,
+    "declarationDir": "./dist",
+    "sourceMap": true,
     "outDir": "./dist",
     "target": "ES2022",
     "composite": true,
@@ -24,6 +30,6 @@
       }
     ]
   },
-  "include": ["./src/**/*.ts", "./src/**/*.tsx", "./dev/next-env.d.ts"],
+  "include": ["src", "./src/**/*.ts", "./src/**/*.tsx", "./dev/next-env.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

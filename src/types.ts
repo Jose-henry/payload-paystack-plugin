@@ -109,13 +109,36 @@ export type SanitizedPaystackPluginConfig = {
   testMode: boolean
 } & Omit<PaystackPluginConfig, 'testMode'>
 
-export type PaystackProxy = (args: {
+// export type PaystackProxy = (args: {
+//   path: string
+//   method?: string
+//   body?: any
+//   secretKey: string
+// }) => Promise<{
+//   data?: any
+//   message?: string
+//   status: number
+// }>
+
+export type PaystackProxy = <T = any>(args: {
+  /**
+   * Path part of the URL, e.g. '/transaction/initialize' or '/charge'
+   */
   path: string
-  method?: string
+  /** HTTP method for the request */
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  /** JSON body to send for POST/PUT requests */
   body?: any
+  /** Your Paystack secret key */
   secretKey: string
+  /** Request timeout in milliseconds (default: 10000) */
+  timeoutMs?: number
+  /** Number of retries on network failure (default: 2) */
+  retries?: number
+  /** Whether to enable logging */
+  logs?: boolean
 }) => Promise<{
-  data?: any
+  data?: T
   message?: string
   status: number
 }>

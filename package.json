@@ -26,23 +26,23 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./src/exports/index.ts",
-      "types": "./src/exports/index.ts",
-      "default": "./src/exports/index.ts"
+      "import": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     },
     "./client": {
       "import": "./src/exports/client.ts",
       "types": "./src/exports/client.ts",
       "default": "./src/exports/client.ts"
     },
-    "./rsc": {
-      "import": "./src/exports/rsc.ts",
-      "types": "./src/exports/rsc.ts",
-      "default": "./src/exports/rsc.ts"
+    "./types": {
+      "import": "./src/exports/types.ts",
+      "types": "./src/exports/types.ts",
+      "default": "./src/exports/types.ts"
     }
   },
-  "main": "./src/exports/index.ts",
-  "types": "./src/exports/index.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "files": [
     "dist"
   ],
@@ -106,23 +106,23 @@
   "publishConfig": {
     "exports": {
       ".": {
-        "import": "./dist/exports/index.js",
-        "types": "./dist/exports/index.d.ts",
-        "default": "./dist/exports/index.js"
+        "import": "./dist/index.js",
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
       },
       "./client": {
         "import": "./dist/exports/client.js",
         "types": "./dist/exports/client.d.ts",
         "default": "./dist/exports/client.js"
       },
-      "./rsc": {
-        "import": "./dist/exports/rsc.js",
-        "types": "./dist/exports/rsc.d.ts",
-        "default": "./dist/exports/rsc.js"
+      "./types": {
+        "import": "./dist/exports/types.js",
+        "types": "./dist/exports/types.d.ts",
+        "default": "./dist/exports/types.js"
       }
     },
-    "main": "./dist/exports/index.js",
-    "types": "./dist/exports/index.d.ts"
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

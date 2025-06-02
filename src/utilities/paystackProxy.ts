@@ -1,34 +1,9 @@
 import type { PaystackProxy } from '../types.js'
 
-interface ProxyOptions {
-  /**
-   * Path part of the URL, e.g. '/transaction/initialize' or '/charge'
-   */
-  path: string
-  /** HTTP method for the request */
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
-  /** JSON body to send for POST/PUT requests */
-  body?: any
-  /** Your Paystack secret key */
-  secretKey: string
-  /** Request timeout in milliseconds (default: 10000) */
-  timeoutMs?: number
-  /** Number of retries on network failure (default: 2) */
-  retries?: number
-  /** Whether to enable logging */
-  logs?: boolean
-}
-
-interface ProxyResponse<T = any> {
-  data?: T
-  message?: string
-  status: number
-}
-
 /**
  * Centralized Paystack HTTP client with retries and timeout support.
  */
-export const paystackProxy = async <T = any>(options: ProxyOptions): Promise<ProxyResponse<T>> => {
+export const paystackProxy: PaystackProxy = async (args) => {
   const {
     path,
     method = 'GET',
@@ -37,7 +12,7 @@ export const paystackProxy = async <T = any>(options: ProxyOptions): Promise<Pro
     timeoutMs = 10000,
     retries = 2,
     logs = false,
-  } = options
+  } = args
 
   const url = `https://api.paystack.co${path}`
 
