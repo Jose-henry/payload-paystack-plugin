@@ -1,6 +1,6 @@
 {
   "name": "paystack-payload-plugin",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "description": "A Payload CMS plugin for seamless Paystack integration, featuring two-way sync, webhooks, REST proxy, and customer blacklisting",
   "license": "MIT",
   "sideEffects": false,
