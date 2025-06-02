@@ -48,6 +48,84 @@ export const syncExistingWithPaystack =
       return doc
     }
 
+    // If no paystackID exists but record has an id, create a new record in Paystack
+    if (!doc.paystackID && doc.id) {
+      if (pluginConfig.logs) {
+        logger.info(
+          `[paystack-plugin] [update-hook] No paystackID found but record exists (id: ${doc.id}), creating new record in Paystack`,
+        )
+      }
+
+      // Build request body from your field mappings
+      const body = deepen(
+        syncConfig.fields.reduce(
+          (acc, { fieldPath, paystackProperty }) => {
+            // Convert amount/price to kobo if it's a monetary field
+            const value = doc[fieldPath]
+            if (value && (paystackProperty === 'amount' || paystackProperty === 'price')) {
+              acc[paystackProperty] = value * 100
+            } else {
+              acc[paystackProperty] = value
+            }
+            return acc
+          },
+          {} as Record<string, any>,
+        ),
+      )
+
+      // Add currency for products
+      if (syncConfig.paystackResourceType === 'product' && pluginConfig.defaultCurrency) {
+        body.currency = pluginConfig.defaultCurrency
+      }
+
+      if (pluginConfig.logs) {
+        logger.info(
+          `[paystack-plugin] [update-hook] Creating new ${syncConfig.paystackResourceType} in Paystack`,
+        )
+        logger.info(
+          `[paystack-plugin] [update-hook] Request body: ${JSON.stringify(body, null, 2)}`,
+        )
+      }
+
+      // Call Paystack to create the record
+      const path = buildPath(syncConfig.paystackResourceType as any)
+      if (pluginConfig.logs) {
+        logger.info(`[paystack-plugin] [update-hook] Calling Paystack API: ${path}`)
+      }
+      const response = await paystackProxy({
+        path,
+        method: 'POST',
+        body,
+        secretKey: pluginConfig.paystackSecretKey,
+        logs: pluginConfig.logs,
+      })
+
+      // Grab the correct *_code field (e.g. customer_code, plan_code, etc.)
+      const codeField = `${syncConfig.paystackResourceTypeSingular}_code`
+      const codeValue = response.data?.[codeField]
+
+      if (response.status >= 200 && response.status < 300 && codeValue) {
+        // For products, store the numeric ID instead of the product_code
+        if (
+          (syncConfig.paystackResourceType === 'product' ||
+            syncConfig.paystackResourceType === 'plan') &&
+          response.data?.id
+        ) {
+          doc.paystackID = response.data.id.toString()
+        } else {
+          doc.paystackID = codeValue
+        }
+        if (pluginConfig.logs) {
+          logger.info(`[paystack-plugin] [update-hook] Created Paystack ID '${doc.paystackID}'`)
+        }
+      } else {
+        logger.error(
+          `[paystack-plugin] [update-hook] Error creating Paystack ${syncConfig.paystackResourceType}: ${response.message} - Response: ${JSON.stringify(response)}`,
+        )
+      }
+      return doc
+    }
+
     if (pluginConfig.logs) {
       logger.info(
         `[paystack-plugin] [update-hook] Updating '${collection.slug}' ID '${doc.paystackID}'`,

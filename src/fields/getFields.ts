@@ -36,7 +36,6 @@ export const getFields = ({ collection, pluginConfig, syncConfig }: GetFieldsArg
       position: 'sidebar',
       description:
         'When checked (default), changes to this record will not be synced to Paystack. Uncheck to enable syncing.',
-      condition: (data) => !!data?.id,
     },
   }
 
