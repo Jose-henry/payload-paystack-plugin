@@ -141,6 +141,7 @@ export const paystackPlugin =
             name: 'blacklisted',
             type: 'checkbox',
             label: 'Blacklisted on Paystack',
+            defaultValue: false,
             admin: {
               position: 'sidebar',
               description: 'If checked this customer will be blocked in Paystack',

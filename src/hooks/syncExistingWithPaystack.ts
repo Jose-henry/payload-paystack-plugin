@@ -49,7 +49,8 @@ export const syncExistingWithPaystack =
     }
 
     // If no paystackID exists but record has an id, create a new record in Paystack
-    if (!doc.paystackID && doc.id) {
+    // Only do this if we're explicitly updating (PATCH) and skipSync is false
+    if (!doc.paystackID && doc.id && !doc.skipSync && req.method === 'PATCH') {
       if (pluginConfig.logs) {
         logger.info(
           `[paystack-plugin] [update-hook] No paystackID found but record exists (id: ${doc.id}), creating new record in Paystack`,
