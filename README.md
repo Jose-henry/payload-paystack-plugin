@@ -8,6 +8,10 @@ Supports two-way sync, REST/webhook integration, and advanced customer blacklist
 
 ⭐ **Star this repository** if you find it useful! Your support helps the project grow and encourages further development.
 
+> **⚠️ IMPORTANT UPDATE NOTE**  
+> **Changes not HMR and importMap issues have been fixed in the latest version.**  
+> If you were experiencing issues with Hot Module Replacement (HMR) or importMap configuration, please update to the latest version.
+
 ---
 
 ## Features
