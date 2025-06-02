@@ -24,5 +24,6 @@
       }
     ]
   },
-  "include": ["./src/**/*.ts", "./src/**/*.tsx", "./dev/next-env.d.ts"]
+  "include": ["./src/**/*.ts", "./src/**/*.tsx", "./dev/next-env.d.ts"],
+  "exclude": ["node_modules", "dist"]
 }
