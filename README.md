@@ -37,11 +37,11 @@ Supports two-way sync, REST/webhook integration, and advanced customer blacklist
 ## Installation
 
 ```bash
-npm install paystack-payload-cms
+npm install paystack-payload-plugin
 # or
-yarn add paystack-payload-cms
+yarn add paystack-payload-plugin
 # or
-pnpm add paystack-payload-cms
+pnpm add paystack-payload-plugin
 ```
 
 After installation, run:
@@ -289,7 +289,7 @@ Besides using the REST proxy endpoint, you have two other options to interact wi
 
 2. **Using the paystackProxy Utility:**
    ```ts
-   import { paystackProxy } from 'paystack-payload-cms/utilities';
+   import { paystackProxy } from 'paystack-payload-plugin/utilities';
    
    // Make API calls using the proxy function
    const response = await paystackProxy({

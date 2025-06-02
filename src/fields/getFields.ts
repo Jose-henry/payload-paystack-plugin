@@ -53,7 +53,7 @@ export const getFields = ({ collection, pluginConfig, syncConfig }: GetFieldsArg
         paystackResourceType: syncConfig.paystackResourceType,
       },
       components: {
-        Field: 'paystack-payload-cms/client#LinkToDoc',
+        Field: 'paystack-payload-plugin/client#LinkToDoc',
       },
     },
   }

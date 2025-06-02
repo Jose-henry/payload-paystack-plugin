@@ -16,20 +16,12 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "@payload-config": [
-        "./payload.config.ts"
-      ],
-      "paystack-payload-cms": [
-        "../src/index.ts"
-      ],
-      "paystack-payload-cms/client": [
-        "../src/exports/client.ts"
-      ],
-      "paystack-payload-cms/rsc": [
-        "../src/exports/rsc.ts"
-      ]
+      "@payload-config": ["./payload.config.ts"],
+      "paystack-payload-plugin": ["../src/index.ts"],
+      "paystack-payload-plugin/client": ["../src/exports/client.ts"],
+      "paystack-payload-plugin/rsc": ["../src/exports/rsc.ts"]
     },
     "noEmit": true,
-    "emitDeclarationOnly": false,
+    "emitDeclarationOnly": false
   }
 }

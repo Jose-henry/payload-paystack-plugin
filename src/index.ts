@@ -7,7 +7,6 @@ import { deleteFromPaystack } from './hooks/deleteFromPaystack.js'
 import { syncExistingWithPaystack } from './hooks/syncExistingWithPaystack.js'
 import { paystackREST } from './routes/rest.js'
 import { paystackWebhooks } from './routes/webhooks.js'
-import { updateProductsCurrency } from './utilities/updateProductsCurrency.js'
 import { syncBlacklistCustomers } from './polling/syncBlacklistCustomers.js'
 
 declare global {

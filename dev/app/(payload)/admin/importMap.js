@@ -1,5 +1,5 @@
-import { LinkToDoc as LinkToDoc_d6fe5beaeb38e65a8ec2b87dc8f21070 } from 'paystack-payload-cms/client'
+import { LinkToDoc as LinkToDoc_d52f47fc3755743591decd2ee23eb660 } from 'paystack-payload-plugin/client'
 
 export const importMap = {
-  "paystack-payload-cms/client#LinkToDoc": LinkToDoc_d6fe5beaeb38e65a8ec2b87dc8f21070
+  "paystack-payload-plugin/client#LinkToDoc": LinkToDoc_d52f47fc3755743591decd2ee23eb660
 }

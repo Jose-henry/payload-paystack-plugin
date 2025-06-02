@@ -232,11 +232,11 @@ Happy coding! 🚀
 
 1. Install the plugin:
    ```bash
-   npm install paystack-payload-cms
+   npm install paystack-payload-plugin
    # or
-   yarn add paystack-payload-cms
+   yarn add paystack-payload-plugin
    # or
-   pnpm add paystack-payload-cms
+   pnpm add paystack-payload-plugin
    ```
 
 2. Generate import map:
