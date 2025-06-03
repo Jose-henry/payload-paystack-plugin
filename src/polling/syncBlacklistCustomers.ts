@@ -1,10 +1,11 @@
 import type { Payload } from 'payload'
 import type { PaystackPluginConfig } from '../types.js'
+import { PaystackPluginLogger } from '../utilities/logger.js'
 
 type SyncBlacklistArgs = {
   payload: Payload
   pluginConfig: PaystackPluginConfig
-  logger: { info: (msg: string) => void; error: (msg: string) => void }
+  logger: PaystackPluginLogger
   pageSize?: number
   maxPages?: number
 }
@@ -15,10 +16,10 @@ type SyncBlacklistArgs = {
  */
 export async function syncBlacklistCustomers({ payload, pluginConfig, logger }: SyncBlacklistArgs) {
   // Defensive: skip polling if not enabled in config
-  logger.info('[polling] Polling function started.')
+  logger.info('Polling function started.')
 
   if (!pluginConfig.blacklistCustomerOption) {
-    logger.info('[polling] Skipped blacklist sync: blacklistCustomerOption is not enabled.')
+    logger.info('Skipped blacklist sync: blacklistCustomerOption is not enabled.')
     return
   }
 
@@ -36,6 +37,7 @@ export async function syncBlacklistCustomers({ payload, pluginConfig, logger }: 
       const resp = await paystackProxy({
         path: `/customer?page=${page}&perPage=${pageSize}`,
         secretKey: paystackSecretKey,
+        logs: pluginConfig.logs,
       })
 
       if (resp.status !== 200 || !Array.isArray(resp.data)) break
@@ -64,9 +66,9 @@ export async function syncBlacklistCustomers({ payload, pluginConfig, logger }: 
       hasMore = resp.data.length === pageSize
       page++
     } catch (e) {
-      logger.error(`[polling] Error syncing blacklist status: ${e}`)
+      logger.error(`Error syncing blacklist status: ${e}`)
       break
     }
   }
-  logger.info(`[polling] Synced blacklist status for ${totalSynced} customers`)
+  logger.info(`Synced blacklist status for ${totalSynced} customers`)
 }

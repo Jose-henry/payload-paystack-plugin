@@ -9,7 +9,7 @@ export const createNewInPaystack =
   (pluginConfig: PaystackPluginConfig): CollectionBeforeValidateHook =>
   async ({ data, collection, req, operation }) => {
     const syncConfig = pluginConfig.sync?.find((c) => c.collection === collection.slug)
-    const logger = new PaystackPluginLogger(req.payload.logger, 'create')
+    const logger = new PaystackPluginLogger(req.payload.logger, pluginConfig, 'create')
 
     // Only log if logs are enabled
     if (pluginConfig.logs) {

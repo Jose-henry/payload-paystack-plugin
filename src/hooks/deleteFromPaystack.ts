@@ -8,7 +8,7 @@ export const deleteFromPaystack =
   (pluginConfig: PaystackPluginConfig): CollectionAfterDeleteHook =>
   async ({ doc, collection, req }) => {
     const syncConfig = pluginConfig.sync?.find((c) => c.collection === collection.slug)
-    const logger = new PaystackPluginLogger(req.payload.logger, 'delete')
+    const logger = new PaystackPluginLogger(req.payload.logger, pluginConfig, 'delete')
 
     // Only log if logs are enabled
     if (pluginConfig.logs) {

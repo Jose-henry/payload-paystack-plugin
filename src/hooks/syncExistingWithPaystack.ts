@@ -9,7 +9,7 @@ export const syncExistingWithPaystack =
   (pluginConfig: PaystackPluginConfig): CollectionAfterChangeHook =>
   async ({ doc, previousDoc, operation, collection, req }) => {
     const syncConfig = pluginConfig.sync?.find((c) => c.collection === collection.slug)
-    const logger = new PaystackPluginLogger(req.payload.logger, 'update')
+    const logger = new PaystackPluginLogger(req.payload.logger, pluginConfig, 'update')
 
     // Only log if logs are enabled
     if (pluginConfig.logs) {

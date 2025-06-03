@@ -11,6 +11,7 @@ import { testEmailAdapter } from './helpers/testEmailAdapter.js'
 import { seed } from './seed.js'
 import type { PaystackPluginConfig } from '../src/types.js'
 import { chargeSuccess } from 'webhooks/chargeSuccess.js'
+import { fa } from 'payload/i18n/fa'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
