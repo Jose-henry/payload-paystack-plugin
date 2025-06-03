@@ -470,6 +470,74 @@ paystackPlugin({
   },
 })
 ```
+example event data:
+Here is the data in a nicely formatted JSON:
+
+
+{
+  "event": "charge.success",
+  "data": {
+    "id": 5025288020569,
+    "domain": "test",
+    "status": "success",
+    "reference": "ie54rnrehtrd",
+    "amount": 1000,
+    "message": null,
+    "gateway_response": "Successful",
+    "paid_at": "2025-06-03T14:17:44.000Z",
+    "created_at": "2025-06-03T14:17:31.000Z",
+    "channel": "card",
+    "currency": "NGN",
+    "ip_address": "132.247.137.240",
+    "metadata": "",
+    "fees_breakdown": null,
+    "log": null,
+    "fees": 15,
+    "fees_split": null,
+    "authorization": {
+      "authorization_code": "AUTH_mxcnr5432q",
+      "bin": "408408",
+      "last4": "4081",
+      "exp_month": "12",
+      "exp_year": "2030",
+      "channel": "card",
+      "card_type": "visa",
+      "bank": "TEST BANK",
+      "country_code": "NG",
+      "brand": "visa",
+      "reusable": true,
+      "signature": "SIG_2X409u7rWzEMBBp95CaN",
+      "account_name": null
+    },
+    "customer": {
+      "id": 2784703341,
+      "first_name": null,
+      "last_name": null,
+      "email": "josephhenry@gmail.com",
+      "customer_code": "CUS_2rxuhf44dda4rwk8jxi",
+      "phone": null,
+      "metadata": null,
+      "risk_action": "default",
+      "international_format_phone": null
+    },
+    "plan": {},
+    "subaccount": {},
+    "split": {},
+    "order_id": null,
+    "paidAt": "2025-06-03T14:17:44.000Z",
+    "requested_amount": 100,
+    "pos_transaction_data": null,
+    "source": {
+      "type": "api",
+      "source": "merchant_api",
+      "entry_point": "transaction_initialize",
+      "identifier": null
+    }
+  }
+}
+
+
+
 
 > **Tip:** Most other resource types (product, plan, customer, etc) do NOT have webhook event support, but you can verify this by reading all the data from events, they send alot.
 
