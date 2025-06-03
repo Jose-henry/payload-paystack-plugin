@@ -15,7 +15,7 @@ export const paystackWebhooks = async (args: {
 }) => {
   const { req, config, pluginConfig } = args
   const { webhookSecret, webhooks, paystackSecretKey } = pluginConfig
-  const logger = new PaystackPluginLogger(req.payload.logger, 'webhook')
+  const logger = new PaystackPluginLogger(req.payload.logger, pluginConfig, 'webhook')
 
   // Log incoming request details
   logger.info(

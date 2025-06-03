@@ -10,7 +10,7 @@ export const paystackREST = async (args: {
 }): Promise<Response> => {
   const { pluginConfig, req } = args
   await addDataAndFileToRequest(req)
-  const logger = new PaystackPluginLogger(req.payload.logger, 'rest')
+  const logger = new PaystackPluginLogger(req.payload.logger, pluginConfig, 'rest')
 
   const { data, user } = req
   if (!user) throw new Forbidden()

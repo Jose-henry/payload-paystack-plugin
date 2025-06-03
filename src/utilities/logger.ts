@@ -1,4 +1,5 @@
 import type { Payload } from 'payload'
+import type { PaystackPluginConfig } from '../types.js'
 
 /**
  * A unified logger for the Paystack plugin, adding consistent prefixes
@@ -7,10 +8,12 @@ import type { Payload } from 'payload'
 export class PaystackPluginLogger {
   private logger: Payload['logger']
   private context?: string
+  private config: PaystackPluginConfig
 
-  constructor(logger: Payload['logger'], context?: string) {
+  constructor(logger: Payload['logger'], config: PaystackPluginConfig, context?: string) {
     this.logger = logger
     this.context = context
+    this.config = config
   }
 
   private prefix(): string {
@@ -18,24 +21,36 @@ export class PaystackPluginLogger {
     return this.context ? `${base}[${this.context}]` : base
   }
 
+  private shouldLog(): boolean {
+    return this.config.logs !== false
+  }
+
   info(message: string): void {
-    this.logger.info(`${this.prefix()} ${message}`)
+    if (this.shouldLog()) {
+      this.logger.info(`${this.prefix()} ${message}`)
+    }
   }
 
   error(message: string): void {
-    this.logger.error(`${this.prefix()} ${message}`)
+    if (this.shouldLog()) {
+      this.logger.error(`${this.prefix()} ${message}`)
+    }
   }
 
   warn(message: string): void {
-    this.logger.warn(`${this.prefix()} ${message}`)
+    if (this.shouldLog()) {
+      this.logger.warn(`${this.prefix()} ${message}`)
+    }
   }
 
   debug(message: string): void {
-    // Some Payload logger implementations may not have debug; fallback to info
-    if (typeof this.logger.debug === 'function') {
-      this.logger.debug(`${this.prefix()} ${message}`)
-    } else {
-      this.logger.info(`${this.prefix()} [debug] ${message}`)
+    if (this.shouldLog()) {
+      // Some Payload logger implementations may not have debug; fallback to info
+      if (typeof this.logger.debug === 'function') {
+        this.logger.debug(`${this.prefix()} ${message}`)
+      } else {
+        this.logger.info(`${this.prefix()} [debug] ${message}`)
+      }
     }
   }
 }

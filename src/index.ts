@@ -8,6 +8,7 @@ import { syncExistingWithPaystack } from './hooks/syncExistingWithPaystack.js'
 import { paystackREST } from './routes/rest.js'
 import { paystackWebhooks } from './routes/webhooks.js'
 import { syncBlacklistCustomers } from './polling/syncBlacklistCustomers.js'
+import { PaystackPluginLogger } from './utilities/logger.js'
 
 declare global {
   var __PAYSTACK_CONFIG_LOGGED__: boolean | undefined
@@ -208,16 +209,7 @@ export const paystackPlugin =
           await syncBlacklistCustomers({
             payload,
             pluginConfig,
-            logger: {
-              info: (msg) => {
-                console.log('[polling info]', msg)
-                payload.logger.info(msg)
-              },
-              error: (msg) => {
-                console.error('[polling error]', msg)
-                payload.logger.error(msg)
-              },
-            },
+            logger: new PaystackPluginLogger(payload.logger, pluginConfig, 'polling'),
             pageSize: pluginConfig.pollingPageSize,
             maxPages: pluginConfig.pollingMaxPages,
           })
@@ -231,16 +223,7 @@ export const paystackPlugin =
             syncBlacklistCustomers({
               payload,
               pluginConfig,
-              logger: {
-                info: (msg) => {
-                  console.log('[polling info]', msg)
-                  payload.logger.info(msg)
-                },
-                error: (msg) => {
-                  console.error('[polling error]', msg)
-                  payload.logger.error(msg)
-                },
-              },
+              logger: new PaystackPluginLogger(payload.logger, pluginConfig, 'polling'),
               pageSize: pluginConfig.pollingPageSize,
               maxPages: pluginConfig.pollingMaxPages,
             })
