@@ -19,7 +19,7 @@
 ## API Integration
 
 * Use the `/paystack/rest` endpoint to proxy any Paystack API call securely from your authenticated Payload app (browser or backend).
-* Use `/paystack/webhook` to receive and process incoming Paystack webhook events. Set this in your Paystack dashboard as: `https://yourdomain.com/paystack/webhook` (for local dev, tunnel via ngrok).
+* Use `/paystack/webhook` to receive and process incoming Paystack webhook events. Set this in your Paystack dashboard as: `https://yourdomain.com/api/paystack/webhook` (for local dev, tunnel via ngrok).
 * **Collections are mapped to Paystack resources** in the plugin `sync` config. You control if they're editable or read-only in Payload.
 
 ---

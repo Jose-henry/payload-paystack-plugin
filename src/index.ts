@@ -86,7 +86,7 @@ export const paystackPlugin =
 🚀 Paystack Plugin Configuration:
    • Mode: ${isTestKey ? 'Test' : 'Live'}
    • REST API: ${pluginConfig.rest ? 'Enabled' : 'Disabled'}
-   • Webhooks: ${pluginConfig.webhooks ? 'Configured' : 'Not configured'}
+   • Webhooks: ${pluginConfig.webhooks ? (pluginConfig.webhookSecret ? 'Configured with webhook secret' : 'Configured but no webhook secret') : 'Not configured'}
    • Blacklist Customer Option: ${pluginConfig.blacklistCustomerOption ? (pluginConfig.polling ? 'Enabled with polling' : 'Enabled without polling') : 'Disabled'}
    • Synced Collections: ${pluginConfig.sync.map((s) => s.collection).join(', ') || 'None'}
    • Default Currency: ${pluginConfig.defaultCurrency}

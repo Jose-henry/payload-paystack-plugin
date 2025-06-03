@@ -14,7 +14,7 @@ export const paystackWebhooks = async (args: {
   pluginConfig: PaystackPluginConfig
 }) => {
   const { req, config, pluginConfig } = args
-  const { webhookSecret, webhooks } = pluginConfig
+  const { webhookSecret, webhooks, paystackSecretKey } = pluginConfig
   const logger = new PaystackPluginLogger(req.payload.logger, 'webhook')
 
   // Log incoming request details
@@ -25,26 +25,50 @@ export const paystackWebhooks = async (args: {
   let returnStatus = 200
 
   try {
-    const rawBody = await req.text?.()
+    // Get raw body as string for signature verification
+    let rawBody: string
+    if (typeof req.text === 'function') {
+      rawBody = await req.text()
+    } else if (req.body) {
+      rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body)
+    } else {
+      throw new Error('No request body found')
+    }
+
     const signature = req.headers.get('x-paystack-signature')
 
     logger.info(
-      `[Paystack Webhook] Processing webhook - Has Signature: ${!!signature}, Has Raw Body: ${!!rawBody}, Has Webhook Secret: ${!!webhookSecret}`,
+      `[Paystack Webhook] Processing webhook - Has Signature: ${!!signature}, Has Raw Body: ${!!rawBody}, Has Webhook Secret: ${!!webhookSecret}, Raw Body: ${rawBody}`,
     )
 
-    if (!signature || !rawBody || !webhookSecret) {
-      throw new Error('Invalid webhook signature or missing body')
+    // If no signature or body, return 200 OK but log warning
+    if (!signature || !rawBody) {
+      logger.warn(
+        `[Paystack Webhook] Missing signature or body - Signature: ${!!signature}, Raw Body: ${!!rawBody}`,
+      )
+      return Response.json({ received: true }, { status: 200 })
     }
 
-    const crypto = await import('crypto')
-    const hash = crypto.createHmac('sha512', webhookSecret).update(rawBody).digest('hex')
+    // If we have a webhook secret, verify the signature
+    if (webhookSecret) {
+      const crypto = await import('crypto')
+      const hash = crypto.createHmac('sha512', webhookSecret).update(rawBody).digest('hex')
 
-    if (hash !== signature) {
-      throw new Error('Webhook signature mismatch')
+      logger.info(`[Paystack Webhook] Generated hash: ${hash}, Received signature: ${signature}`)
+
+      if (hash !== signature) {
+        logger.error(
+          `[Paystack Webhook] Signature mismatch - Generated: ${hash}, Received: ${signature}`,
+        )
+        throw new Error('Webhook signature mismatch')
+      }
     }
 
+    // Parse the event data
     const event = JSON.parse(rawBody)
-    logger.info(`[Paystack Webhook] Event received: ${event.event}`)
+    logger.info(
+      `[Paystack Webhook] Event received: ${event.event}, Data: ${JSON.stringify(event.data)}`,
+    )
 
     // --- (1) Native sync for read-only collections & any configured collection ---
     await handleWebhooks({
@@ -57,6 +81,7 @@ export const paystackWebhooks = async (args: {
 
     // --- (2) User custom webhook handler support (function or map of events) ---
     if (typeof webhooks === 'function') {
+      logger.info(`[Paystack Webhook] Running custom webhook handler function`)
       await webhooks({
         event,
         req,
@@ -65,6 +90,7 @@ export const paystackWebhooks = async (args: {
         payload: req.payload,
       })
     } else if (typeof webhooks === 'object' && typeof webhooks[event.event] === 'function') {
+      logger.info(`[Paystack Webhook] Running custom webhook handler for event: ${event.event}`)
       await webhooks[event.event]({
         event,
         req,
@@ -72,6 +98,8 @@ export const paystackWebhooks = async (args: {
         pluginConfig,
         payload: req.payload,
       })
+    } else {
+      logger.info(`[Paystack Webhook] No custom handler found for event: ${event.event}`)
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
@@ -79,5 +107,6 @@ export const paystackWebhooks = async (args: {
     returnStatus = 400
   }
 
+  logger.info(`[Paystack Webhook] Returning response with status: ${returnStatus}`)
   return Response.json({ received: true }, { status: returnStatus })
 }

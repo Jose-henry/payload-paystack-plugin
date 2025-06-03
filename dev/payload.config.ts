@@ -10,7 +10,7 @@ import { devUser } from './helpers/credentials.js'
 import { testEmailAdapter } from './helpers/testEmailAdapter.js'
 import { seed } from './seed.js'
 import type { PaystackPluginConfig } from '../src/types.js'
-import { paymentRequestSuccess } from './webhooks/paymentRequestSuccess.js'
+import { chargeSuccess } from 'webhooks/chargeSuccess.js'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -147,7 +147,7 @@ export default buildConfig({
       blacklistCustomerOption: true,
       defaultCurrency: 'NGN',
       webhooks: {
-        'paymentrequest.success': paymentRequestSuccess,
+        'charge.success': chargeSuccess,
         // ...add other event handlers as needed
       },
       sync: [
@@ -183,61 +183,61 @@ export default buildConfig({
             { fieldPath: 'phone', paystackProperty: 'phone' },
           ],
         },
-        // NEW: Transaction, Refund, Order, Subscription
-        {
-          collection: 'transaction',
-          paystackResourceType: 'transaction',
-          paystackResourceTypeSingular: 'transaction',
-          fields: [
-            { fieldPath: 'status', paystackProperty: 'status' },
-            { fieldPath: 'reference', paystackProperty: 'reference' },
-            { fieldPath: 'amount', paystackProperty: 'amount' },
-            { fieldPath: 'currency', paystackProperty: 'currency' },
-            { fieldPath: 'paid_at', paystackProperty: 'paid_at' },
-            { fieldPath: 'customer_code', paystackProperty: 'customer.customer_code' },
-            { fieldPath: 'channel', paystackProperty: 'channel' },
-          ],
-        },
-        {
-          collection: 'refund',
-          paystackResourceType: 'refund',
-          paystackResourceTypeSingular: 'refund',
-          fields: [
-            { fieldPath: 'transaction', paystackProperty: 'transaction' },
-            { fieldPath: 'amount', paystackProperty: 'amount' },
-            { fieldPath: 'status', paystackProperty: 'status' },
-            { fieldPath: 'currency', paystackProperty: 'currency' },
-            { fieldPath: 'refunded_at', paystackProperty: 'refunded_at' },
-            { fieldPath: 'customer_note', paystackProperty: 'customer_note' },
-            { fieldPath: 'merchant_note', paystackProperty: 'merchant_note' },
-          ],
-        },
-        {
-          collection: 'order',
-          paystackResourceType: 'order',
-          paystackResourceTypeSingular: 'order',
-          fields: [
-            { fieldPath: 'id', paystackProperty: 'id' },
-            { fieldPath: 'amount', paystackProperty: 'amount' },
-            { fieldPath: 'currency', paystackProperty: 'currency' },
-            { fieldPath: 'status', paystackProperty: 'status' },
-            { fieldPath: 'customer_code', paystackProperty: 'customer.customer_code' },
-            { fieldPath: 'created_at', paystackProperty: 'created_at' },
-          ],
-        },
-        {
-          collection: 'subscription',
-          paystackResourceType: 'subscription',
-          paystackResourceTypeSingular: 'subscription',
-          fields: [
-            { fieldPath: 'plan', paystackProperty: 'plan' },
-            { fieldPath: 'customer_code', paystackProperty: 'customer.customer_code' },
-            { fieldPath: 'status', paystackProperty: 'status' },
-            { fieldPath: 'start', paystackProperty: 'start' },
-            { fieldPath: 'amount', paystackProperty: 'amount' },
-            { fieldPath: 'subscription_code', paystackProperty: 'subscription_code' },
-          ],
-        },
+        // // NEW: Transaction, Refund, Order, Subscription Read-Only that can only be updated by hooks dont need to be in the sync field, since this works from payload to paystack
+        // {
+        //   collection: 'transaction',
+        //   paystackResourceType: 'transaction',
+        //   paystackResourceTypeSingular: 'transaction',
+        //   fields: [
+        //     { fieldPath: 'status', paystackProperty: 'status' },
+        //     { fieldPath: 'reference', paystackProperty: 'reference' },
+        //     { fieldPath: 'amount', paystackProperty: 'amount' },
+        //     { fieldPath: 'currency', paystackProperty: 'currency' },
+        //     { fieldPath: 'paid_at', paystackProperty: 'paid_at' },
+        //     { fieldPath: 'customer_code', paystackProperty: 'customer.customer_code' },
+        //     { fieldPath: 'channel', paystackProperty: 'channel' },
+        //   ],
+        // },
+        // {
+        //   collection: 'refund',
+        //   paystackResourceType: 'refund',
+        //   paystackResourceTypeSingular: 'refund',
+        //   fields: [
+        //     { fieldPath: 'transaction', paystackProperty: 'transaction' },
+        //     { fieldPath: 'amount', paystackProperty: 'amount' },
+        //     { fieldPath: 'status', paystackProperty: 'status' },
+        //     { fieldPath: 'currency', paystackProperty: 'currency' },
+        //     { fieldPath: 'refunded_at', paystackProperty: 'refunded_at' },
+        //     { fieldPath: 'customer_note', paystackProperty: 'customer_note' },
+        //     { fieldPath: 'merchant_note', paystackProperty: 'merchant_note' },
+        //   ],
+        // },
+        // {
+        //   collection: 'order',
+        //   paystackResourceType: 'order',
+        //   paystackResourceTypeSingular: 'order',
+        //   fields: [
+        //     { fieldPath: 'id', paystackProperty: 'id' },
+        //     { fieldPath: 'amount', paystackProperty: 'amount' },
+        //     { fieldPath: 'currency', paystackProperty: 'currency' },
+        //     { fieldPath: 'status', paystackProperty: 'status' },
+        //     { fieldPath: 'customer_code', paystackProperty: 'customer.customer_code' },
+        //     { fieldPath: 'created_at', paystackProperty: 'created_at' },
+        //   ],
+        // },
+        // {
+        //   collection: 'subscription',
+        //   paystackResourceType: 'subscription',
+        //   paystackResourceTypeSingular: 'subscription',
+        //   fields: [
+        //     { fieldPath: 'plan', paystackProperty: 'plan' },
+        //     { fieldPath: 'customer_code', paystackProperty: 'customer.customer_code' },
+        //     { fieldPath: 'status', paystackProperty: 'status' },
+        //     { fieldPath: 'start', paystackProperty: 'start' },
+        //     { fieldPath: 'amount', paystackProperty: 'amount' },
+        //     { fieldPath: 'subscription_code', paystackProperty: 'subscription_code' },
+        //   ],
+        // },
       ],
     }),
   ],

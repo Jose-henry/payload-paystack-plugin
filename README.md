@@ -234,7 +234,7 @@ To enable true two-way sync, use both the REST endpoint and configure the Paysta
 Set your webhook URL in the Paystack dashboard to:
 
 ```
-https://xxxx.ngrok.io/paystack/webhook
+https://xxxx.ngrok.io/api/paystack/webhook
 ```
 
 Use the same value for `paystackSecretKey` and `webhookSecret` (usually your Paystack secret key).
@@ -403,27 +403,75 @@ The `skipSync` flag only prevents creation/updates in Paystack, but deletion wil
 To handle a supported webhook event, pass a handler to the plugin config. Here's an example that logs refunds processed:
 
 ```ts
-import type { PaystackWebhookHandler } from '{path}/types'
+import type { PaystackWebhookHandler } from '{plugin-name}/types.js'
 
-export const refundProcessed: PaystackWebhookHandler = async ({ event, payload }) => {
-  if (event.event === 'refund.processed') {
-    const refundData = event.data
-    payload.logger.info(`Refund processed: ${JSON.stringify(refundData)}`)
-    // You may update your 'refund' collection here if you wish
+export const chargeSuccess: PaystackWebhookHandler = async ({
+  event,
+  payload,
+  pluginConfig,
+  req,
+}) => {
+  // Log the full request details for debugging
+  payload.logger.info(`[Paystack Webhook] Processing charge.success event:`, {
+    reference: event.data.reference,
+    amount: event.data.amount,
+    status: event.data.status,
+  })
+
+  try {
+    const transaction = event.data
+    // Create or update transaction record
+    const existing = await payload.find({
+      collection: 'transaction',
+      where: { reference: { equals: transaction.reference } },
+    })
+
+    if (existing.docs?.length > 0) {
+      await payload.update({
+        collection: 'transaction',
+        id: existing.docs[0].id,
+        data: {
+          status: transaction.status,
+          amount: transaction.amount,
+          currency: transaction.currency,
+          paid_at: transaction.paid_at,
+          customer_code: transaction.customer?.customer_code,
+          channel: transaction.channel,
+        },
+      })
+      payload.logger.info(`✅ Updated transaction ${transaction.reference}`)
+    } else {
+      await payload.create({
+        collection: 'transaction',
+        data: {
+          status: transaction.status,
+          reference: transaction.reference,
+          amount: transaction.amount,
+          currency: transaction.currency,
+          paid_at: transaction.paid_at,
+          customer_code: transaction.customer?.customer_code,
+          channel: transaction.channel,
+        },
+      })
+      payload.logger.info(`✅ Created new transaction ${transaction.reference}`)
+    }
+  } catch (err) {
+    payload.logger.error(`❌ Error processing charge.success: ${err}`)
   }
 }
+
 
 // Register in your plugin config:
 paystackPlugin({
   // ...other config,
   webhooks: {
-    'refund.processed': refundProcessed,
+     'charge.success': chargeSuccess,
     // ...
   },
 })
 ```
 
-> **Tip:** Most other resource types (product, plan, customer, etc) do NOT have webhook event support.
+> **Tip:** Most other resource types (product, plan, customer, etc) do NOT have webhook event support, but you can verify this by reading all the data from events, they send alot.
 
 ---
 
