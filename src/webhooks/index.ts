@@ -1,4 +1,4 @@
-import type { PaystackWebhookHandler } from '../types.js'
+import type { PaystackWebhookHandler, SanitizedPaystackPluginConfig } from '../types.js'
 import { handleCreatedOrUpdated } from './handleCreatedOrUpdated.js'
 import { handleDeleted } from './handleDeleted.js'
 
@@ -12,7 +12,10 @@ import { handleDeleted } from './handleDeleted.js'
 export const handleWebhooks: PaystackWebhookHandler = async (args) => {
   const { event, payload, pluginConfig } = args
 
-  if (pluginConfig?.logs) {
+  // Early return if no plugin config or sync config
+  if (!pluginConfig?.sync) return
+
+  if (pluginConfig.logs) {
     payload.logger.info(`🪝 Received Paystack event: '${event.event}'`)
   }
 
@@ -20,7 +23,7 @@ export const handleWebhooks: PaystackWebhookHandler = async (args) => {
   const [resourceTypeRaw, method] = event.event.split('.') // e.g., "transaction", "success"
 
   // Find sync config for this resource type (e.g., transaction, refund, etc.)
-  const syncConfig = pluginConfig?.sync?.find(
+  const syncConfig = pluginConfig.sync.find(
     (sync) => sync.paystackResourceTypeSingular === resourceTypeRaw,
   )
 
@@ -38,7 +41,7 @@ export const handleWebhooks: PaystackWebhookHandler = async (args) => {
     case 'processed':
       await handleCreatedOrUpdated({
         ...args,
-        pluginConfig,
+        pluginConfig: pluginConfig as SanitizedPaystackPluginConfig,
         resourceType: resourceTypeRaw,
         syncConfig,
       })
@@ -48,14 +51,14 @@ export const handleWebhooks: PaystackWebhookHandler = async (args) => {
     case 'deleted':
       await handleDeleted({
         ...args,
-        pluginConfig,
+        pluginConfig: pluginConfig as SanitizedPaystackPluginConfig,
         resourceType: resourceTypeRaw,
         syncConfig,
       })
       break
     default:
       // Log for unsupported native sync events (but user's handler may still run)
-      if (pluginConfig?.logs) {
+      if (pluginConfig.logs) {
         payload.logger.info(
           `ℹ️ Paystack event '${event.event}' received, but not natively handled by plugin. Only user-defined handlers (if any) will run.`,
         )

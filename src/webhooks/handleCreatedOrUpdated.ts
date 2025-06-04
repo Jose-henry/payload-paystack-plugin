@@ -1,12 +1,14 @@
 import { v4 as uuid } from 'uuid'
 import { deepen } from '../utilities/deepen.js'
 import type { PaystackWebhookHandler, SanitizedPaystackPluginConfig } from '../types.js'
+import { PaystackPluginLogger } from '../utilities/logger.js'
 
 type HandleCreatedOrUpdated = (
   args: {
     resourceType: string
     syncConfig: SanitizedPaystackPluginConfig['sync'][0]
-  } & Parameters<PaystackWebhookHandler>[0],
+    pluginConfig: SanitizedPaystackPluginConfig
+  } & Omit<Parameters<PaystackWebhookHandler>[0], 'pluginConfig'>,
 ) => Promise<void>
 
 /**
@@ -14,12 +16,64 @@ type HandleCreatedOrUpdated = (
  * coming from Paystack, for any resource/collection configured for sync.
  */
 export const handleCreatedOrUpdated: HandleCreatedOrUpdated = async (args) => {
-  const { config, event, payload, pluginConfig, resourceType, syncConfig } = args
-  const { logs } = pluginConfig || {}
+  const { config, event, payload, resourceType, syncConfig, pluginConfig } = args
+  const logger = new PaystackPluginLogger(payload.logger, pluginConfig, 'webhook')
 
   const paystackDoc: any = event.data
-  const paystackID = paystackDoc.id
   const collectionSlug = syncConfig.collection
+
+  // Smart ID extraction based on resource type
+  let paystackID: string | number | undefined
+
+  // Handle different resource types and their ID locations
+  switch (resourceType) {
+    case 'customer':
+      // Customer can be in different places in the event data
+      paystackID = paystackDoc.customer?.id || paystackDoc.customer?.customer_code || paystackDoc.id
+      break
+    case 'transaction':
+    case 'charge':
+      paystackID = paystackDoc.id || paystackDoc.reference
+      break
+    case 'plan':
+      paystackID = paystackDoc.id || paystackDoc.plan_code
+      break
+    case 'product':
+      paystackID = paystackDoc.id || paystackDoc.product_code
+      break
+    case 'refund':
+      paystackID = paystackDoc.id || paystackDoc.reference
+      break
+    case 'subscription':
+      paystackID = paystackDoc.id || paystackDoc.subscription_code
+      break
+    case 'transfer':
+      paystackID = paystackDoc.id || paystackDoc.reference
+      break
+    case 'dedicatedaccount':
+      paystackID = paystackDoc.id || paystackDoc.account_number
+      break
+    case 'paymentrequest':
+      paystackID = paystackDoc.id || paystackDoc.request_code
+      break
+    case 'invoice':
+      paystackID = paystackDoc.id || paystackDoc.invoice_code
+      break
+    default:
+      // For other resources, try common ID locations
+      paystackID =
+        paystackDoc.id ||
+        paystackDoc[`${resourceType}_code`] ||
+        paystackDoc.reference ||
+        paystackDoc[`${resourceType}_id`]
+  }
+
+  if (!paystackID) {
+    logger.warn(
+      `Could not find Paystack ID for ${resourceType} in event data. Available fields: ${Object.keys(paystackDoc).join(', ')}`,
+    )
+    return
+  }
 
   // Try to find existing document by paystackID
   const existingQuery = await payload.find({
@@ -38,7 +92,9 @@ export const handleCreatedOrUpdated: HandleCreatedOrUpdated = async (args) => {
   // Map Paystack properties to your local fields using the sync config
   let syncedData = syncConfig.fields.reduce(
     (acc, field) => {
-      acc[field.fieldPath] = paystackDoc[field.paystackProperty]
+      // Handle nested properties (e.g., customer.email)
+      const value = field.paystackProperty.split('.').reduce((obj, key) => obj?.[key], paystackDoc)
+      acc[field.fieldPath] = value
       return acc
     },
     {} as Record<string, any>,
@@ -65,17 +121,17 @@ export const handleCreatedOrUpdated: HandleCreatedOrUpdated = async (args) => {
         },
         disableVerificationEmail: !!isAuthCollection,
       })
-      if (logs) payload.logger.info(`✅ Created new '${collectionSlug}' doc from Paystack webhook.`)
+      logger.info(`Created new '${collectionSlug}' doc from Paystack webhook.`)
     } else {
       await payload.update({
         id: foundDoc.id,
         collection: collectionSlug,
         data: syncedData,
       })
-      if (logs) payload.logger.info(`✅ Updated '${collectionSlug}' doc from Paystack webhook.`)
+      logger.info(`Updated '${collectionSlug}' doc from Paystack webhook.`)
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
-    payload.logger.error(`❌ Sync error for '${collectionSlug}': ${msg}`)
+    logger.error(`Sync error for '${collectionSlug}': ${msg}`)
   }
 }
