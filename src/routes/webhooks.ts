@@ -14,13 +14,19 @@ export const paystackWebhooks = async (args: {
   pluginConfig: PaystackPluginConfig
 }) => {
   const { req, config, pluginConfig } = args
-  const { webhookSecret, webhooks, paystackSecretKey } = pluginConfig
+  const { webhookSecret, webhooks, paystackSecretKey, testMode } = pluginConfig
   const logger = new PaystackPluginLogger(req.payload.logger, pluginConfig, 'webhook')
 
   // Log incoming request details
   logger.info(
-    `[Paystack Webhook] Received webhook request - Method: ${req.method}, URL: ${req.url}, Headers: ${JSON.stringify(Object.fromEntries(req.headers.entries()))}, Has Body: ${!!req.body}, Has Webhook Secret: ${!!webhookSecret}`,
+    `[Paystack Webhook] Received webhook request - Method: ${req.method}, URL: ${req.url}, Headers: ${JSON.stringify(Object.fromEntries(req.headers.entries()))}, Has Body: ${!!req.body}, Has Webhook Secret: ${!!webhookSecret}, Test Mode: ${testMode}`,
   )
+
+  // If in test mode, just return 200 OK
+  if (testMode) {
+    logger.info('[Paystack Webhook] Test mode enabled - skipping webhook processing')
+    return Response.json({ received: true, testMode: true }, { status: 200 })
+  }
 
   let returnStatus = 200
 

@@ -293,10 +293,11 @@ Besides using the REST proxy endpoint, you have two other options to interact wi
    
    // Make API calls using the proxy function
    const response = await paystackProxy({
-     paystackPath: '/transaction/initialize',
-     paystackMethod: 'POST',
-     paystackArgs: [{ email: 'customer@email.com', amount: 20000 }]
-   });
+      path: '/transaction/initialize',
+      method: 'POST',
+      body: { email: 'customer@email.com', amount: 20000 },
+      secretKey:  process.env.PAYSTACK_SECRET_KEY!,
+    })
    ```
 
 The `paystackProxy` utility provides a convenient way to make Paystack API calls while maintaining consistent error handling and authentication. It's particularly useful when you want to make Paystack API calls from your backend code without exposing the REST endpoint.

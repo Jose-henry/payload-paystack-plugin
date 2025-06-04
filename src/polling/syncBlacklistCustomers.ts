@@ -23,6 +23,12 @@ export async function syncBlacklistCustomers({ payload, pluginConfig, logger }: 
     return
   }
 
+  // If in test mode, just log and return
+  if (pluginConfig.testMode) {
+    logger.info('Test mode enabled - skipping actual Paystack API call')
+    return
+  }
+
   const pageSize = pluginConfig.pollingPageSize || 100 // Allow page size config, default 100
   const pollingMaxPages = pluginConfig.pollingMaxPages || 20 // Optionally cap pages, default 20 (2,000 records)
   let page = 1
