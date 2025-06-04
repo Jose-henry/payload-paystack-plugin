@@ -5,8 +5,8 @@ import { handleDeleted } from './handleDeleted.js'
 /**
  * Orchestrates native sync for Paystack webhook events.
  * Handles all collections registered in pluginConfig.sync (including read-only).
- * - "created"/"updated"/"success"/"processed" => upsert in Payload
- * - "deleted" => remove from Payload
+ * - "create"/"created"/"update"/"updated"/"success"/"processed" => upsert in Payload
+ * - "delete"/"deleted" => remove from Payload
  * Logs if method/action is not handled natively.
  */
 export const handleWebhooks: PaystackWebhookHandler = async (args) => {
@@ -30,7 +30,9 @@ export const handleWebhooks: PaystackWebhookHandler = async (args) => {
   // Native sync logic for upsert/delete
   switch (method) {
     // Upsert on any create/update/success/processed event
+    case 'create':
     case 'created':
+    case 'update':
     case 'updated':
     case 'success':
     case 'processed':
@@ -42,6 +44,7 @@ export const handleWebhooks: PaystackWebhookHandler = async (args) => {
       })
       break
     // Remove on "deleted"
+    case 'delete':
     case 'deleted':
       await handleDeleted({
         ...args,

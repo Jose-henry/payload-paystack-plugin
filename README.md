@@ -223,7 +223,7 @@ You control your Payload collections—make them editable or read-only as you wi
 }
 ```
 
-These collections are synced using the REST proxy, webhook, or manual update logic (as configured in your sync settings).
+These collections are synced using the REST proxy, webhook, or manual update logic on payload (as configured in your sync settings).
 
 To enable true two-way sync, use both the REST endpoint and configure the Paystack webhook to point to your Payload API.
 
@@ -471,10 +471,10 @@ paystackPlugin({
   },
 })
 ```
-example event data:
+Example event data:
 Here is the data in a nicely formatted JSON:
 
-
+```json
 {
   "event": "charge.success",
   "data": {
@@ -536,6 +536,7 @@ Here is the data in a nicely formatted JSON:
     }
   }
 }
+```
 
 
 
