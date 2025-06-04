@@ -34,7 +34,11 @@ export type PaystackPluginConfig = {
   enabled?: boolean
   /** Enable detailed logging of sync events */
   logs?: boolean
-  /** Expose a /paystack/rest proxy endpoint */
+
+  /**
+   * Expose a /paystack/rest proxy endpoint.
+   * @default false
+   */
   rest?: boolean
   /** Your Paystack secret key, e.g. sk_test_xxx */
   paystackSecretKey: string
@@ -48,6 +52,7 @@ export type PaystackPluginConfig = {
    * When true, prevents all API calls to Paystack (both test and live environments).
    * When false (default), makes real API calls using the provided secret key.
    * This is different from isTestKey which determines which Paystack environment to use.
+   * @default false
    */
   testMode?: boolean
   /**
@@ -99,6 +104,7 @@ export type PaystackPluginConfig = {
    * - 60 * 60 * 1000 = 3,600,000ms (1 hour)
    * - 5 * 60 * 1000 = 300,000ms (5 minutes)
    * - 24 * 60 * 60 * 1000 = 86,400,000ms (24 hours)
+   * @default 600000 (10 minutes- 10 * 60 * 1000)
    */
   pollingInterval?: number
 }
