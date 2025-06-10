@@ -1,4 +1,4 @@
-import type { CollectionAfterChangeHook } from 'payload'
+import type { CollectionBeforeChangeHook } from 'payload'
 import type { PaystackPluginConfig } from '../types.js'
 import { deepen } from '../utilities/deepen.js'
 import { paystackProxy } from '../utilities/paystackProxy.js'
@@ -6,8 +6,8 @@ import { PaystackPluginLogger } from '../utilities/logger.js'
 import { buildPath } from '../utilities/buildPath.js'
 
 export const syncExistingWithPaystack =
-  (pluginConfig: PaystackPluginConfig): CollectionAfterChangeHook =>
-  async ({ doc, previousDoc, operation, collection, req }) => {
+  (pluginConfig: PaystackPluginConfig): CollectionBeforeChangeHook =>
+  async ({ data, originalDoc, operation, collection, req }) => {
     const syncConfig = pluginConfig.sync?.find((c) => c.collection === collection.slug)
     const logger = new PaystackPluginLogger(req.payload.logger, pluginConfig, 'update')
 
@@ -16,7 +16,8 @@ export const syncExistingWithPaystack =
       logger.info(`[paystack-plugin] [update-hook] Operation: ${operation}`)
       logger.info(`[paystack-plugin] [update-hook] HTTP Method: ${req.method}`)
       logger.info(`[paystack-plugin] [update-hook] Has sync config: ${!!syncConfig}`)
-      logger.info(`[paystack-plugin] [update-hook] Skip sync: ${!!doc.skipSync}`)
+      logger.info(`[paystack-plugin] [update-hook] Skip sync: ${!!data?.skipSync}`)
+      logger.info(`[paystack-plugin] [update-hook] Context skip sync: ${!!req.context?.skipSync}`)
       logger.info(`[paystack-plugin] [update-hook] Test mode: ${!!pluginConfig.testMode}`)
     }
 
@@ -24,45 +25,45 @@ export const syncExistingWithPaystack =
     if (
       !syncConfig ||
       pluginConfig.testMode ||
-      doc.skipSync ||
+      data?.skipSync ||
+      req.context?.skipSync ||
       operation !== 'update' ||
       req.method !== 'PATCH'
     ) {
       if (pluginConfig.logs) {
-        // Only show relevant skip conditions
         const skipReasons = []
         if (!syncConfig) skipReasons.push('no sync config')
         if (pluginConfig.testMode) skipReasons.push('test mode')
-        if (doc.skipSync) skipReasons.push('skipSync flag')
-        if (operation !== 'update' && operation !== 'create')
-          skipReasons.push('not an update operation')
-        if (req.method !== 'PATCH' && req.method !== 'POST') skipReasons.push('not a PATCH request')
+        if (data?.skipSync) skipReasons.push('skipSync flag')
+        if (req.context?.skipSync) skipReasons.push('context skipSync flag')
+        if (operation !== 'update') skipReasons.push('not an update operation')
+        if (req.method !== 'PATCH') skipReasons.push('not a PATCH request')
 
-        // Only log if there are actual skip reasons
         if (skipReasons.length > 0) {
           logger.info(
             `[paystack-plugin] [update-hook] Skipping sync hook due to: ${skipReasons.join(', ')}`,
           )
         }
       }
-      return doc
+      return data
     }
 
     // If no paystackID exists but record has an id, create a new record in Paystack
-    // Only do this if we're explicitly updating (PATCH) and skipSync is false
-    if (!doc.paystackID && doc.id && !doc.skipSync && req.method === 'PATCH') {
+    if (!originalDoc?.paystackID && originalDoc?.id && !data?.skipSync && req.method === 'PATCH') {
       if (pluginConfig.logs) {
         logger.info(
-          `[paystack-plugin] [update-hook] No paystackID found but record exists (id: ${doc.id}), creating new record in Paystack`,
+          `[paystack-plugin] [update-hook] No paystackID found but record exists (id: ${originalDoc.id}), creating new record in Paystack`,
         )
       }
+
+      // Merge originalDoc with incoming changes for complete data
+      const completeData = { ...originalDoc, ...data }
 
       // Build request body from your field mappings
       const body = deepen(
         syncConfig.fields.reduce(
           (acc, { fieldPath, paystackProperty }) => {
-            // Convert amount/price to kobo if it's a monetary field
-            const value = doc[fieldPath]
+            const value = completeData[fieldPath]
             if (value && (paystackProperty === 'amount' || paystackProperty === 'price')) {
               acc[paystackProperty] = value * 100
             } else {
@@ -101,98 +102,109 @@ export const syncExistingWithPaystack =
         logs: pluginConfig.logs,
       })
 
-      // Grab the correct *_code field (e.g. customer_code, plan_code, etc.)
+      // Grab the correct *_code field
       const codeField = `${syncConfig.paystackResourceTypeSingular}_code`
       const codeValue = response.data?.[codeField]
 
       if (response.status >= 200 && response.status < 300 && codeValue) {
+        let paystackID: string
+
         // For products, store the numeric ID instead of the product_code
         if (
           (syncConfig.paystackResourceType === 'product' ||
             syncConfig.paystackResourceType === 'plan') &&
           response.data?.id
         ) {
-          doc.paystackID = response.data.id.toString()
+          paystackID = response.data.id.toString()
         } else {
-          doc.paystackID = codeValue
+          paystackID = codeValue
         }
+
+        // ✅ SET THE PAYSTACKID IN THE DATA (no separate database call needed)
+        data.paystackID = paystackID
+
         if (pluginConfig.logs) {
-          logger.info(`[paystack-plugin] [update-hook] Created Paystack ID '${doc.paystackID}'`)
+          logger.info(`[paystack-plugin] [update-hook] Created Paystack ID '${paystackID}'`)
         }
       } else {
         logger.error(
           `[paystack-plugin] [update-hook] Error creating Paystack ${syncConfig.paystackResourceType}: ${response.message} - Response: ${JSON.stringify(response)}`,
         )
       }
-      return doc
+      return data
     }
 
-    if (pluginConfig.logs) {
-      logger.info(
-        `[paystack-plugin] [update-hook] Updating '${collection.slug}' ID '${doc.paystackID}'`,
-      )
-    }
-
-    // Only include fields that actually changed
-    const toUpdate = deepen(
-      syncConfig.fields.reduce(
-        (acc, { fieldPath, paystackProperty }) => {
-          if (doc[fieldPath] !== previousDoc[fieldPath]) {
-            // Convert amount/price to kobo if it's a monetary field
-            const value = doc[fieldPath]
-            if (value && (paystackProperty === 'amount' || paystackProperty === 'price')) {
-              acc[paystackProperty] = value * 100
-            } else {
-              acc[paystackProperty] = value
-            }
-          }
-          return acc
-        },
-        {} as Record<string, any>,
-      ),
-    )
-
-    // Add currency for products if it's not already included
-    if (
-      syncConfig.paystackResourceType === 'product' &&
-      pluginConfig.defaultCurrency &&
-      !toUpdate.currency
-    ) {
-      toUpdate.currency = pluginConfig.defaultCurrency
-    }
-
-    if (pluginConfig.logs) {
-      logger.info(`[paystack-plugin] [update-hook] Fields to update: ${JSON.stringify(toUpdate)}`)
-    }
-
-    if (Object.keys(toUpdate).length) {
-      // Use PUT for Paystack API even though Payload uses PATCH internally
-      const path = buildPath(syncConfig.paystackResourceType as any, doc.paystackID, 'PUT')
+    // Handle existing Paystack records - update them
+    const existingPaystackID = originalDoc?.paystackID || data.paystackID
+    if (existingPaystackID) {
       if (pluginConfig.logs) {
-        logger.info(`[paystack-plugin] [update-hook] Calling Paystack API: ${path}`)
-      }
-      const response = await paystackProxy({
-        path,
-        method: 'PUT', // Always use PUT for Paystack API updates
-        body: toUpdate,
-        secretKey: pluginConfig.paystackSecretKey,
-        logs: pluginConfig.logs,
-      })
-
-      if (response.status >= 200 && response.status < 300) {
-        if (pluginConfig.logs) {
-          logger.info(`[paystack-plugin] [update-hook] Updated Paystack ID '${doc.paystackID}'`)
-        }
-      } else {
-        logger.error(
-          `[paystack-plugin] [update-hook] Error updating Paystack ${syncConfig.paystackResourceType}: ${response.message}`,
+        logger.info(
+          `[paystack-plugin] [update-hook] Updating '${collection.slug}' ID '${existingPaystackID}'`,
         )
       }
-    } else if (pluginConfig.logs) {
-      logger.info(
-        `[paystack-plugin] [update-hook] No changes to sync for Paystack ID '${doc.paystackID}'`,
+
+      // Only include fields that actually changed
+      const toUpdate = deepen(
+        syncConfig.fields.reduce(
+          (acc, { fieldPath, paystackProperty }) => {
+            // Check if field exists in incoming data (was changed)
+            if (data[fieldPath] !== undefined && data[fieldPath] !== originalDoc?.[fieldPath]) {
+              const value = data[fieldPath]
+              if (value && (paystackProperty === 'amount' || paystackProperty === 'price')) {
+                acc[paystackProperty] = value * 100
+              } else {
+                acc[paystackProperty] = value
+              }
+            }
+            return acc
+          },
+          {} as Record<string, any>,
+        ),
       )
+
+      // Add currency for products if it's not already included
+      if (
+        syncConfig.paystackResourceType === 'product' &&
+        pluginConfig.defaultCurrency &&
+        !toUpdate.currency
+      ) {
+        toUpdate.currency = pluginConfig.defaultCurrency
+      }
+
+      if (pluginConfig.logs) {
+        logger.info(`[paystack-plugin] [update-hook] Fields to update: ${JSON.stringify(toUpdate)}`)
+      }
+
+      if (Object.keys(toUpdate).length) {
+        const path = buildPath(syncConfig.paystackResourceType as any, existingPaystackID, 'PUT')
+        if (pluginConfig.logs) {
+          logger.info(`[paystack-plugin] [update-hook] Calling Paystack API: ${path}`)
+        }
+        const response = await paystackProxy({
+          path,
+          method: 'PUT',
+          body: toUpdate,
+          secretKey: pluginConfig.paystackSecretKey,
+          logs: pluginConfig.logs,
+        })
+
+        if (response.status >= 200 && response.status < 300) {
+          if (pluginConfig.logs) {
+            logger.info(
+              `[paystack-plugin] [update-hook] Updated Paystack ID '${existingPaystackID}'`,
+            )
+          }
+        } else {
+          logger.error(
+            `[paystack-plugin] [update-hook] Error updating Paystack ${syncConfig.paystackResourceType}: ${response.message}`,
+          )
+        }
+      } else if (pluginConfig.logs) {
+        logger.info(
+          `[paystack-plugin] [update-hook] No changes to sync for Paystack ID '${existingPaystackID}'`,
+        )
+      }
     }
 
-    return doc
+    return data
   }

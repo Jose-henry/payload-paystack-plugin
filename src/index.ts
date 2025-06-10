@@ -127,8 +127,8 @@ export const paystackPlugin =
           ...(collection.hooks?.beforeValidate || []),
           createNewInPaystack(pluginConfig),
         ],
-        afterChange: [
-          ...(collection.hooks?.afterChange || []),
+        beforeChange: [
+          ...(collection.hooks?.beforeChange || []),
           syncExistingWithPaystack(pluginConfig),
         ],
         afterDelete: [...(collection.hooks?.afterDelete || []), deleteFromPaystack(pluginConfig)],
