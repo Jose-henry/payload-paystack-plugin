@@ -22,6 +22,7 @@ export const handleDeleted: HandleDeleted = async (args) => {
 
   // Smart ID extraction based on resource type
   let paystackID: string | number | undefined
+  let reference: string | number | undefined
 
   // Handle different resource types and their ID locations
   switch (resourceType) {
@@ -30,7 +31,8 @@ export const handleDeleted: HandleDeleted = async (args) => {
       break
     case 'transaction':
     case 'charge':
-      paystackID = paystackDoc.id || paystackDoc.reference
+      paystackID = paystackDoc.id
+      reference = paystackDoc.reference
       break
     case 'plan':
       paystackID = paystackDoc.id || paystackDoc.plan_code || paystackDoc.plan?.id
@@ -40,12 +42,14 @@ export const handleDeleted: HandleDeleted = async (args) => {
       break
     case 'refund':
       paystackID = paystackDoc.id || paystackDoc.reference
+      reference = paystackDoc.reference
       break
     case 'subscription':
       paystackID = paystackDoc.id || paystackDoc.subscription_code
       break
     case 'transfer':
       paystackID = paystackDoc.id || paystackDoc.reference
+      reference = paystackDoc.reference
       break
     case 'dedicatedaccount':
       paystackID = paystackDoc.id || paystackDoc.account_number
@@ -57,35 +61,46 @@ export const handleDeleted: HandleDeleted = async (args) => {
       paystackID = paystackDoc.id || paystackDoc.invoice_code
       break
     default:
-      // For other resources, try common ID locations
       paystackID =
-        paystackDoc.id ||
-        paystackDoc[`${resourceType}_code`] ||
-        paystackDoc.reference ||
-        paystackDoc[`${resourceType}_id`]
+        paystackDoc.id || paystackDoc[`${resourceType}_code`] || paystackDoc[`${resourceType}_id`]
+      reference = paystackDoc.reference
   }
 
-  if (!paystackID) {
-    logger.warn(
-      `Could not find Paystack ID for ${resourceType} in event data. Available fields: ${Object.keys(paystackDoc).join(', ')}`,
+  if (!paystackID && !reference) {
+    logger.info(
+      `Event processed, but no identifier (paystackID/reference) found for ${resourceType}. Available fields: ${Object.keys(paystackDoc).join(', ')}. Refer to Paystack documentation for which events/resources require which identifiers.`,
     )
     return
   }
 
   try {
-    // Look for an existing document with the matching paystackID field
-    const result = await payload.find({
-      collection: collectionSlug,
-      limit: 1,
-      pagination: false,
-      where: {
-        paystackID: {
-          equals: paystackID,
+    // Look for an existing document with the matching paystackID or reference field
+    let result
+    if (paystackID) {
+      result = await payload.find({
+        collection: collectionSlug,
+        limit: 1,
+        pagination: false,
+        where: {
+          paystackID: {
+            equals: paystackID,
+          },
         },
-      },
-    })
+      })
+    } else if (reference) {
+      result = await payload.find({
+        collection: collectionSlug,
+        limit: 1,
+        pagination: false,
+        where: {
+          reference: {
+            equals: reference,
+          },
+        },
+      })
+    }
 
-    const foundDoc = result.docs[0]
+    const foundDoc = result?.docs?.[0]
 
     if (foundDoc) {
       await payload.delete({
@@ -94,7 +109,9 @@ export const handleDeleted: HandleDeleted = async (args) => {
       })
       logger.info(`Deleted '${collectionSlug}' doc from Paystack webhook.`)
     } else {
-      logger.info(`No document to delete for Paystack ID '${paystackID}' in '${collectionSlug}'.`)
+      logger.info(
+        `No document to delete for Paystack ID '${paystackID}' or reference '${reference}' in '${collectionSlug}'.`,
+      )
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

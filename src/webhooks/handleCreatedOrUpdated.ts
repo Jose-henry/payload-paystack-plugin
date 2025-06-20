@@ -24,16 +24,17 @@ export const handleCreatedOrUpdated: HandleCreatedOrUpdated = async (args) => {
 
   // Smart ID extraction based on resource type
   let paystackID: string | number | undefined
+  let reference: string | number | undefined
 
   // Handle different resource types and their ID locations
   switch (resourceType) {
     case 'customer':
-      // Customer can be in different places in the event data
       paystackID = paystackDoc.customer?.id || paystackDoc.customer?.customer_code || paystackDoc.id
       break
     case 'transaction':
     case 'charge':
-      paystackID = paystackDoc.id || paystackDoc.reference
+      paystackID = paystackDoc.id
+      reference = paystackDoc.reference
       break
     case 'plan':
       paystackID = paystackDoc.id || paystackDoc.plan_code
@@ -43,12 +44,14 @@ export const handleCreatedOrUpdated: HandleCreatedOrUpdated = async (args) => {
       break
     case 'refund':
       paystackID = paystackDoc.id || paystackDoc.reference
+      reference = paystackDoc.reference
       break
     case 'subscription':
       paystackID = paystackDoc.id || paystackDoc.subscription_code
       break
     case 'transfer':
       paystackID = paystackDoc.id || paystackDoc.reference
+      reference = paystackDoc.reference
       break
     case 'dedicatedaccount':
       paystackID = paystackDoc.id || paystackDoc.account_number
@@ -60,34 +63,45 @@ export const handleCreatedOrUpdated: HandleCreatedOrUpdated = async (args) => {
       paystackID = paystackDoc.id || paystackDoc.invoice_code
       break
     default:
-      // For other resources, try common ID locations
       paystackID =
-        paystackDoc.id ||
-        paystackDoc[`${resourceType}_code`] ||
-        paystackDoc.reference ||
-        paystackDoc[`${resourceType}_id`]
+        paystackDoc.id || paystackDoc[`${resourceType}_code`] || paystackDoc[`${resourceType}_id`]
+      reference = paystackDoc.reference
   }
 
-  if (!paystackID) {
-    logger.warn(
-      `Could not find Paystack ID for ${resourceType} in event data. Available fields: ${Object.keys(paystackDoc).join(', ')}`,
+  if (!paystackID && !reference) {
+    logger.info(
+      `Event processed, but no identifier (paystackID/reference) found for ${resourceType}. Available fields: ${Object.keys(paystackDoc).join(', ')}. Refer to Paystack documentation for which events/resources require which identifiers.`,
     )
     return
   }
 
-  // Try to find existing document by paystackID
-  const existingQuery = await payload.find({
-    collection: collectionSlug,
-    limit: 1,
-    pagination: false,
-    where: {
-      paystackID: {
-        equals: paystackID,
+  // Try to find existing document by paystackID or reference
+  let existingQuery
+  if (paystackID) {
+    existingQuery = await payload.find({
+      collection: collectionSlug,
+      limit: 1,
+      pagination: false,
+      where: {
+        paystackID: {
+          equals: paystackID,
+        },
       },
-    },
-  })
+    })
+  } else if (reference) {
+    existingQuery = await payload.find({
+      collection: collectionSlug,
+      limit: 1,
+      pagination: false,
+      where: {
+        reference: {
+          equals: reference,
+        },
+      },
+    })
+  }
 
-  const foundDoc = existingQuery.docs[0] as any
+  const foundDoc = existingQuery?.docs?.[0] as any
 
   // Map Paystack properties to your local fields using the sync config
   let syncedData = syncConfig.fields.reduce(

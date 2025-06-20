@@ -191,6 +191,25 @@ export default buildConfig({
             { fieldPath: 'phone', paystackProperty: 'phone' },
           ],
         },
+        {
+          collection: 'transaction',
+          paystackResourceType: 'transaction',
+          paystackResourceTypeSingular: 'transaction',
+          fields: [
+            { fieldPath: 'paystackID', paystackProperty: 'id' },
+            { fieldPath: 'status', paystackProperty: 'status' },
+            { fieldPath: 'reference', paystackProperty: 'reference' },
+            { fieldPath: 'amount', paystackProperty: 'amount' },
+            { fieldPath: 'currency', paystackProperty: 'currency' },
+            { fieldPath: 'paid_at', paystackProperty: 'paid_at' },
+            // The following fields use webhook events with nested values:
+            { fieldPath: 'customer_code', paystackProperty: 'customer.customer_code' }, // nested: customer.customer_code
+            { fieldPath: 'channel', paystackProperty: 'channel' },
+            { fieldPath: 'customer_first_name', paystackProperty: 'customer.first_name' }, // nested: customer.first_name
+            { fieldPath: 'customer_last_name', paystackProperty: 'customer.last_name' },   // nested: customer.last_name
+            { fieldPath: 'customer_email', paystackProperty: 'customer.email' },           // nested: customer.email
+          ],
+        },
       ],
     }),
   ],
@@ -542,6 +561,22 @@ Here is the data in a nicely formatted JSON:
 
 
 > **Tip:** Most other resource types (product, plan, customer, etc) do NOT have webhook event support, but you can verify this by reading all the data from events, they send alot.
+
+---
+
+## ⚠️ Important: Collection Identifiers for Webhook Sync
+
+To ensure the out-of-the-box webhook sync works correctly, your Payload collections **must include the correct identifier field** for each Paystack resource you want to sync. For example:
+
+- Some Paystack events/resources use a unique `paystackID` (e.g., `id`, `customer_code`, etc.).
+- Others (like `charge.success` for transactions) use a `reference` field as the unique identifier.
+
+**You must:**
+- Add the appropriate identifier field (e.g., `paystackID` or `reference`) to your Payload collection schema.
+- Include that field in your plugin sync config's `fields` array (e.g., `{ fieldPath: 'reference', paystackProperty: 'reference' }`).
+- Refer to [Paystack documentation](https://paystack.com/docs/payments/webhooks/#events) to determine which identifier is required for each event/resource type.
+
+If neither identifier is present in the event data or your collection, the plugin will log a warning and skip syncing for that event.
 
 ---
 
