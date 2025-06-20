@@ -580,6 +580,25 @@ If neither identifier is present in the event data or your collection, the plugi
 
 ---
 
+## ⚠️ Identifier Mapping Scenarios and Their Effects
+
+> **🚨 IMPORTANT:**
+> If you do **not** add the unique identifier (e.g., `paystackID` or `reference` or others according to the paystack resource data property) to your sync config's `fields` array, the plugin may create duplicate records in your Payload collection. Always include the identifier in both your collection schema and your sync config for reliable syncing and updates.
+
+| Scenario                        | Identifier in Event | Identifier in Collection Schema | Identifier in Sync Config | What Happens?                                                                 |
+|----------------------------------|--------------------|-------------------------------|--------------------------|------------------------------------------------------------------------------|
+| Only `reference` present         | Yes                | Yes                           | Yes                      | Upsert by reference (works as expected)                                       |
+| Only `reference` present         | Yes                | Yes                           | **No**                   | Creates record, but identifier field is empty; future updates may duplicate   |
+| Only `paystackID` present        | Yes                | Yes                           | Yes                      | Upsert by paystackID (works as expected)                                      |
+| Neither present                  | No                 | -                             | -                        | Logs warning, skips processing (no create)                                    |
+
+> **Best Practice:**
+> - Always add the unique identifier field (e.g., `paystackID` or `reference` or others according to the paystack resource data property) to your Payload collection schema.
+> - Always include that field in your sync config's `fields` array.
+> - Refer to [Paystack documentation](https://paystack.com/docs) to determine which identifier is required for each event/resource type.
+
+---
+
 ## Plugin Options
 
 | Option                           | Type    | Description                                                                                       |
